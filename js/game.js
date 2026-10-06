@@ -99,11 +99,11 @@ vrMenuPanel.position.set(0, 1.25, -1.5);
 vrMenuPanel.visible = false;
 scene.add(vrMenuPanel);
 
-// Panel 3D Flotante de Game Over dentro de VR
+// Panel 3D Flotante de Game Over dentro de VR (anclado directamente al visor XR)
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 1.25, -1.5);
+vrGameOverPanel.position.set(0, 0.05, -1.45);
 vrGameOverPanel.visible = false;
-scene.add(vrGameOverPanel);
+xrCameraRig.add(vrGameOverPanel);
 
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
@@ -452,10 +452,11 @@ function triggerGameOver(obstacleType) {
             (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
     }
 
-    // Mostrar panel flotante 3D si estamos en Realidad Virtual (A la altura perfecta de los ojos)
+    // Mostrar panel flotante 3D si estamos en Realidad Virtual (Frente a los ojos del jugador)
     if (renderer.xr.isPresenting && vrGameOverPanel) {
         vrGameOverPanel.userData.update('¡IMPACTO FATAL!', obstacleType === 'pedestrian' ? 'Atropello a peatón en cruce' : 'Colisión frontal contra vehículo', `${currentKmh} KM/H • ${reactionSeconds.split(' ')[0]}`);
-        vrGameOverPanel.position.set(player.position.x - 0.5, 1.65, player.position.z - 1.3);
+        vrGameOverPanel.position.set(0, 0.05, -1.45);
+        vrGameOverPanel.rotation.set(0, 0, 0);
         vrGameOverPanel.visible = true;
     }
 
