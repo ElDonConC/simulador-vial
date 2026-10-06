@@ -260,53 +260,70 @@ function createVRGameOverPanel() {
 function createVRMenuPanel() {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
-    canvas.height = 360;
+    canvas.height = 420;
     const ctx = canvas.getContext('2d');
 
     function render(selectedIdx) {
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.95)';
-        ctx.fillRect(0, 0, 512, 360);
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.96)';
+        ctx.fillRect(0, 0, 512, 420);
 
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 6;
-        ctx.strokeRect(6, 6, 500, 348);
+        ctx.strokeRect(6, 6, 500, 408);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px sans-serif';
+        ctx.font = 'bold 30px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('METAVERSO VIAL VR', 256, 48);
+        ctx.fillText('METAVERSO VIAL VR', 256, 44);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '16px sans-serif';
-        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para empezar', 256, 80);
+        ctx.font = '15px sans-serif';
+        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para elegir modo', 256, 74);
 
         const modes = [
-            { title: '1. Conducción Atenta (100% Lúcido)', color: selectedIdx === 0 ? '#3b82f6' : '#1e293b', text: '#ffffff' },
+            { title: '1. Conducción Atenta (Lúcido)', color: selectedIdx === 0 ? '#2563eb' : '#1e293b', text: '#ffffff' },
             { title: '2. Bajo Efectos del Alcohol 🍺', color: selectedIdx === 1 ? '#9333ea' : '#1e293b', text: '#ffffff' },
             { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' }
         ];
 
         modes.forEach((m, idx) => {
-            const y = 110 + idx * 75;
+            const y = 96 + idx * 64;
             ctx.fillStyle = m.color;
-            ctx.fillRect(36, y, 440, 60);
+            ctx.fillRect(30, y, 452, 52);
 
             if (selectedIdx === idx) {
-                ctx.strokeStyle = '#f8fafc';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(36, y, 440, 60);
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(30, y, 452, 52);
             }
 
             ctx.fillStyle = m.text;
-            ctx.font = 'bold 20px sans-serif';
-            ctx.fillText(m.title, 256, y + 38);
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillText(m.title, 256, y + 33);
         });
+
+        // Caja de ayuda con los controles en las gafas
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+        ctx.fillRect(30, 298, 452, 100);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(30, 298, 452, 100);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('🕹️ CONTROLES EN META QUEST:', 256, 322);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('• Joystick (Palanca): Girar a la izquierda / derecha', 256, 348);
+        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 256, 370);
+        ctx.fillText('• Soltar Freno: Acelera automáticamente a velocidad normal', 256, 388);
     }
 
     render(0);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const planeGeo = new THREE.PlaneGeometry(2.6, 1.8);
+    const planeGeo = new THREE.PlaneGeometry(2.3, 1.9);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };

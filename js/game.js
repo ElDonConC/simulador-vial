@@ -55,15 +55,36 @@ const xrCameraRig = new THREE.Group();
 xrCameraRig.add(camera);
 scene.add(xrCameraRig);
 
-// Menú 3D Flotante de inicio / selección de modo en VR
+// Controladores Touch y Rayos Láser Visibles (Manos en VR)
+const controller1 = renderer.xr.getController(0);
+const controller2 = renderer.xr.getController(1);
+
+function createControllerPointer() {
+    const rayGroup = new THREE.Group();
+    // Línea láser brillante
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -3.5)]);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3 });
+    const rayLine = new THREE.Line(lineGeo, lineMat);
+    // Esfera emisiva en la punta de la mano
+    const handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    rayGroup.add(rayLine, handGlow);
+    return rayGroup;
+}
+
+controller1.add(createControllerPointer());
+controller2.add(createControllerPointer());
+xrCameraRig.add(controller1);
+xrCameraRig.add(controller2);
+
+// Menú 3D Flotante de inicio / selección de modo en VR (ubicado dentro de la cabina)
 const vrMenuPanel = createVRMenuPanel();
-vrMenuPanel.position.set(0, 1.5, -2.8);
+vrMenuPanel.position.set(0, 1.25, -1.5);
 vrMenuPanel.visible = false;
 scene.add(vrMenuPanel);
 
 // Panel 3D Flotante de Game Over dentro de VR
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 1.5, -2.8);
+vrGameOverPanel.position.set(0, 1.25, -1.5);
 vrGameOverPanel.visible = false;
 scene.add(vrGameOverPanel);
 
@@ -255,9 +276,12 @@ let vrStickDebounce = 0;
 
 function showVRMenu() {
     gameState = 'menu';
+    isBraking = false;
+    isDownDown = false;
+    if (player) player.visible = false; // Ocultar auto para no obstruir el menú en VR
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
     if (vrMenuPanel) {
-        vrMenuPanel.position.set(0, 1.4, -2.5);
+        vrMenuPanel.position.set(0, 1.3, -1.4);
         vrMenuPanel.visible = true;
         vrMenuPanel.userData.render(vrSelectedModeIdx);
     }
@@ -271,10 +295,11 @@ function startGame(mode) {
     gameState = 'playing';
     score = 0;
     targetX = 0;
-    speedMultiplier = 0.6;
+    speedMultiplier = 0.75; // Arrancar a velocidad normal de crucero (~68 km/h)
     isBraking = false;
     isDownDown = false;
 
+    if (player) player.visible = true;
     player.position.set(0, 0, 0);
     player.rotation.set(0, 0, 0);
     wheelGroup.rotation.z = 0;
@@ -391,7 +416,7 @@ function triggerGameOver(obstacleType) {
     // Mostrar panel flotante 3D si estamos en Realidad Virtual
     if (renderer.xr.isPresenting && vrGameOverPanel) {
         vrGameOverPanel.userData.update('¡IMPACTO FATAL!', obstacleType === 'pedestrian' ? 'Atropello a peatón en cruce' : 'Colisión frontal contra vehículo', `${currentKmh} KM/H • ${reactionSeconds.split(' ')[0]}`);
-        vrGameOverPanel.position.set(player.position.x - 0.5, 1.4, player.position.z - 2.5);
+        vrGameOverPanel.position.set(player.position.x - 0.5, 1.3, player.position.z - 1.4);
         vrGameOverPanel.visible = true;
     }
 
@@ -453,16 +478,18 @@ function animate() {
                     if (gp.buttons) {
                         // Botón Trigger (índice 0)
                         if (gp.buttons[0] && gp.buttons[0].pressed) triggerPressed = true;
-                        // Botón Grip (índice 1)
+                        // Botón Grip (índice 1 - botón de agarrar lateral)
                         if (gp.buttons[1] && gp.buttons[1].pressed) gripPressed = true;
-                        // Botones A/B o X/Y (índices 4, 5)
+                        // Botones A/B o X/Y
                         if (gp.buttons[4] && gp.buttons[4].pressed) anyButtonPressed = true;
                         if (gp.buttons[5] && gp.buttons[5].pressed) anyButtonPressed = true;
                     }
-                    // Detectar joysticks
-                    if (gp.axes && gp.axes.length >= 4) {
-                        if (Math.abs(gp.axes[2]) > 0.15) stickXInput = gp.axes[2];
-                        if (Math.abs(gp.axes[3]) > 0.25) stickYInput = gp.axes[3];
+                    // Detectar joystick
+                    if (gp.axes && gp.axes.length >= 2) {
+                        const sx = (gp.axes.length >= 4) ? gp.axes[2] : gp.axes[0];
+                        const sy = (gp.axes.length >= 4) ? gp.axes[3] : gp.axes[1];
+                        if (Math.abs(sx) > 0.12) stickXInput = sx;
+                        if (Math.abs(sy) > 0.25) stickYInput = sy;
                     }
                 }
             }
@@ -493,7 +520,7 @@ function animate() {
                     resetGame();
                 }
             } else if (gameState === 'playing') {
-                // Manejo de auto en VR
+                // Dirección suave con Joystick
                 if (Math.abs(stickXInput) > 0.1) {
                     targetX += stickXInput * 0.22;
                 }
@@ -504,18 +531,24 @@ function animate() {
     }
 
     if (gameState === 'playing') {
-        // Dinámica de aceleración y freno
+        // Dinámica de aceleración natural y freno progresivo
         if (isBraking) {
-            speedMultiplier = Math.max(0.15, speedMultiplier - 0.015);
+            // Frenado fuerte al mantener pulsado el botón de freno
+            speedMultiplier = Math.max(0.1, speedMultiplier - 0.025);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
             if (skidSynth && Math.random() > 0.85) {
                 skidSynth.triggerAttackRelease("16n", undefined, 0.3);
             }
         } else if (isDownDown) {
-            speedMultiplier = Math.max(0.2, speedMultiplier - 0.005);
+            speedMultiplier = Math.max(0.2, speedMultiplier - 0.008);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else {
-            speedMultiplier += 0.00015;
+            // Recuperación rápida de aceleración de crucero (hasta 70 - 90 km/h)
+            if (speedMultiplier < 0.8) {
+                speedMultiplier += 0.012; // Acelera rápido de vuelta a velocidad normal
+            } else {
+                speedMultiplier += 0.00015;
+            }
             speedMultiplier = Math.min(speedMultiplier, 1.4);
             if (elBrakeIndicator) elBrakeIndicator.classList.add('hidden');
         }
