@@ -146,15 +146,11 @@
     <!-- Render 3D Cabina FPV -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- Efecto viñeta / parabrisas -->
+    <!-- Efecto viñeta / parabrisas (pointer-events-none) -->
     <div class="windshield-tint"></div>
 
-    <!-- Zonas de control táctil para móviles -->
-    <div id="touch-left"></div>
-    <div id="touch-right"></div>
-
     <!-- Capa de Interfaz y Menús -->
-    <div id="ui-layer" class="flex flex-col items-center justify-center relative">
+    <div id="ui-layer" class="flex flex-col items-center justify-center">
 
         <!-- Selector de Cámara Flotante (Durante el juego) -->
         <div id="cam-toggle" class="hidden pointer-events-auto absolute top-5 right-5 z-40 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-slate-300 shadow-lg cursor-pointer hover:bg-slate-800 transition" onclick="toggleCameraView()">
@@ -316,6 +312,10 @@
         </div>
     </div>
 
+    <!-- Zonas de control táctil para móviles (activadas solo durante la partida) -->
+    <div id="touch-left" class="hidden"></div>
+    <div id="touch-right" class="hidden"></div>
+
     <script>
         // ============================================================
         // ESTADO GLOBAL DEL SIMULADOR
@@ -348,37 +348,35 @@
         let audioInitialized = false;
         let engineNoise, engineFilter, crashSynth, notificationSynth, skidSynth, sirenSynth;
 
-        async function initAudio() {
+        function initAudio() {
             if (audioInitialized) return;
             try {
-                await Tone.start();
+                if (window.Tone) {
+                    Tone.start().then(() => {
+                        engineNoise = new Tone.Noise("brown").start();
+                        engineFilter = new Tone.Filter(220, "lowpass").toDestination();
+                        engineNoise.connect(engineFilter);
+                        engineNoise.volume.value = -12;
 
-                // Sonido de motor con síntesis continua
-                engineNoise = new Tone.Noise("brown").start();
-                engineFilter = new Tone.Filter(220, "lowpass").toDestination();
-                engineNoise.connect(engineFilter);
-                engineNoise.volume.value = -Infinity;
+                        crashSynth = new Tone.NoiseSynth({
+                            noise: { type: "white" },
+                            envelope: { attack: 0.005, decay: 1.8, sustain: 0, release: 0.8 }
+                        }).toDestination();
 
-                // Explosión de impacto
-                crashSynth = new Tone.NoiseSynth({
-                    noise: { type: "white" },
-                    envelope: { attack: 0.005, decay: 1.8, sustain: 0, release: 0.8 }
-                }).toDestination();
+                        skidSynth = new Tone.NoiseSynth({
+                            noise: { type: "pink" },
+                            envelope: { attack: 0.08, decay: 0.6, sustain: 0, release: 0.3 }
+                        }).toDestination();
 
-                // Chillido de frenada
-                skidSynth = new Tone.NoiseSynth({
-                    noise: { type: "pink" },
-                    envelope: { attack: 0.08, decay: 0.6, sustain: 0, release: 0.3 }
-                }).toDestination();
+                        notificationSynth = new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: "sine" },
+                            envelope: { attack: 0.01, decay: 0.12, sustain: 0.05, release: 0.4 }
+                        }).toDestination();
+                        notificationSynth.volume.value = 4;
 
-                // Notificación tipo teléfono
-                notificationSynth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: "sine" },
-                    envelope: { attack: 0.01, decay: 0.12, sustain: 0.05, release: 0.4 }
-                }).toDestination();
-                notificationSynth.volume.value = 4;
-
-                audioInitialized = true;
+                        audioInitialized = true;
+                    }).catch(e => console.log('Audio start bypassed:', e));
+                }
             } catch (err) {
                 console.warn("Audio Context error:", err);
             }
@@ -832,8 +830,8 @@
         // ============================================================
         // FLUJO DE JUEGO (GAME LOOP)
         // ============================================================
-        async function startGame(mode) {
-            await initAudio();
+        function startGame(mode) {
+            initAudio();
 
             currentMode = mode;
             gameState = 'playing';
@@ -845,7 +843,6 @@
             player.position.set(0, 0, 0);
             player.rotation.set(0, 0, 0);
             wheelGroup.rotation.z = 0;
-            updateCameraPosition();
 
             // Limpiar obstáculos anteriores
             obstacles.forEach(o => scene.remove(o));
@@ -858,6 +855,10 @@
             elGameOver.classList.remove('menu-visible');
             elHud.classList.remove('opacity-0');
             elCamToggle.classList.remove('hidden');
+
+            // Mostrar zonas de toque móvil
+            tLeft.classList.remove('hidden');
+            tRight.classList.remove('hidden');
 
             elCanvas.className = '';
             clearInterval(distractionInterval);
