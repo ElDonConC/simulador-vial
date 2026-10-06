@@ -571,17 +571,19 @@ function animate() {
                             vrHitMarker.visible = true;
                             hitFound = true;
 
-                            // Mapear coordenada UV de impacto a las 4 opciones (de 1680px de altura)
+                            // Mapear coordenada UV de impacto a las 5 opciones (de 1780px de altura)
                             if (hit.uv) {
                                 const uvY = hit.uv.y; // 1.0 (arriba) a 0.0 (abajo)
-                                // Item 0: y 350-535 -> uv 0.68 a 0.79
-                                // Item 1: y 565-750 -> uv 0.55 a 0.66
-                                // Item 2: y 780-965 -> uv 0.42 a 0.53
-                                // Item 3: y 995-1180 -> uv 0.29 a 0.40
-                                if (uvY >= 0.67 && uvY <= 0.81) rayPointedIdx = 0;
-                                else if (uvY >= 0.54 && uvY < 0.67) rayPointedIdx = 1;
-                                else if (uvY >= 0.41 && uvY < 0.54) rayPointedIdx = 2;
-                                else if (uvY >= 0.28 && uvY < 0.41) rayPointedIdx = 3;
+                                // Item 0: y 310-480 -> uv 0.73 a 0.82
+                                // Item 1: y 505-675 -> uv 0.62 a 0.71
+                                // Item 2: y 700-870 -> uv 0.51 a 0.60
+                                // Item 3: y 895-1065 -> uv 0.40 a 0.49
+                                // Item 4 (Salir): y 1090-1260 -> uv 0.29 a 0.38
+                                if (uvY >= 0.73 && uvY <= 0.84) rayPointedIdx = 0;
+                                else if (uvY >= 0.62 && uvY < 0.73) rayPointedIdx = 1;
+                                else if (uvY >= 0.51 && uvY < 0.62) rayPointedIdx = 2;
+                                else if (uvY >= 0.40 && uvY < 0.51) rayPointedIdx = 3;
+                                else if (uvY >= 0.28 && uvY < 0.40) rayPointedIdx = 4;
                             }
                             break;
                         }
@@ -597,9 +599,9 @@ function animate() {
                     vrSelectedModeIdx = rayPointedIdx;
                     vrMenuPanel.userData.render(vrSelectedModeIdx);
                 } else if (now - vrStickDebounce > 260) {
-                    // Navegación con palanca física
+                    // Navegación con palanca física (5 opciones: 0 a 4)
                     if (stickYInput > 0.3) {
-                        vrSelectedModeIdx = Math.min(3, vrSelectedModeIdx + 1);
+                        vrSelectedModeIdx = Math.min(4, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
                         vrStickDebounce = now;
                     } else if (stickYInput < -0.3) {
@@ -609,7 +611,7 @@ function animate() {
                     }
                 }
 
-                // Iniciar juego o alternar volumen con Gatillo o Botón A/X
+                // Iniciar juego, alternar volumen o salir de VR con Gatillo o Botón A/X
                 if (triggerPressed || buttonPrimary) {
                     if (vrSelectedModeIdx === 3) {
                         if (now - vrStickDebounce > 280) {
@@ -619,6 +621,12 @@ function animate() {
                             setMasterVolume(nextVol);
                             vrMenuPanel.userData.render(3);
                             vrStickDebounce = now;
+                        }
+                    } else if (vrSelectedModeIdx === 4) {
+                        // Salir de Realidad Virtual
+                        if (vrSession) {
+                            vrHitMarker.visible = false;
+                            vrSession.end();
                         }
                     } else {
                         const modes = ['normal', 'drunk', 'distracted'];

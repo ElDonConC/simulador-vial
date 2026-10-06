@@ -287,100 +287,101 @@ function createVRGameOverPanel() {
     return mesh;
 }
 
-// Menú Flotante 3D para seleccionar modo en VR (Ultra Alta Definición 2048x1680)
+// Menú Flotante 3D para seleccionar modo en VR (Ultra Alta Definición 2048x1780)
 function createVRMenuPanel() {
     const canvas = document.createElement('canvas');
     canvas.width = 2048;
-    canvas.height = 1680;
+    canvas.height = 1780;
     const ctx = canvas.getContext('2d');
     let texture = null;
 
     function render(selectedIdx) {
         ctx.fillStyle = 'rgba(8, 12, 26, 0.98)';
-        ctx.fillRect(0, 0, 2048, 1680);
+        ctx.fillRect(0, 0, 2048, 1780);
 
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 18;
-        ctx.strokeRect(18, 18, 2012, 1644);
+        ctx.strokeRect(18, 18, 2012, 1744);
 
         // Badge Educleta
         ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
-        ctx.fillRect(780, 50, 488, 64);
+        ctx.fillRect(780, 45, 488, 60);
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 4;
-        ctx.strokeRect(780, 50, 488, 64);
+        ctx.strokeRect(780, 45, 488, 60);
         ctx.fillStyle = '#f87171';
-        ctx.font = 'bold 36px sans-serif';
+        ctx.font = 'bold 34px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('ONG EDUCLETA', 1024, 96);
+        ctx.fillText('ONG EDUCLETA', 1024, 88);
 
         // Título Principal
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 92px sans-serif';
-        ctx.fillText('METAVERSO VIAL VR', 1024, 210);
+        ctx.font = '900 86px sans-serif';
+        ctx.fillText('METAVERSO VIAL VR', 1024, 195);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 44px sans-serif';
-        ctx.fillText('Apunta con el láser azul y presiona Gatillo para elegir', 1024, 290);
+        ctx.font = 'bold 40px sans-serif';
+        ctx.fillText('Apunta con el láser azul y presiona Gatillo para elegir', 1024, 265);
 
         const currentVolPercent = Math.round(currentVolume * 100);
         const modes = [
-            { title: '1. Conducción Atenta (100% Lúcido)', sub: 'Reflejos normales y control al 100%', color: '#2563eb', border: '#60a5fa' },
-            { title: '2. Bajo Efectos del Alcohol 🍺', sub: 'Visión en túnel, retardo neuromuscular y desvío', color: '#9333ea', border: '#c084fc' },
-            { title: '3. Conducción Distraída (Celular) 📱', sub: 'Ceguera inatencional por mensajes de WhatsApp', color: '#d97706', border: '#fbbf24' },
-            { title: `🔊 Volumen de Audio: ${currentVolPercent}%`, sub: 'Toca con el láser para alternar el nivel de sonido', color: '#0284c7', border: '#38bdf8' }
+            { title: '1. Conducción Atenta (100% Lúcido)', sub: 'Reflejos normales y control al 100%', color: '#2563eb' },
+            { title: '2. Bajo Efectos del Alcohol 🍺', sub: 'Visión en túnel, retardo neuromuscular y desvío', color: '#9333ea' },
+            { title: '3. Conducción Distraída (Celular) 📱', sub: 'Ceguera inatencional por mensajes de WhatsApp', color: '#d97706' },
+            { title: `🔊 Volumen de Audio: ${currentVolPercent}%`, sub: 'Toca con el láser para alternar nivel de sonido', color: '#0284c7' },
+            { title: '🚪 SALIR DE REALIDAD VIRTUAL (VR)', sub: 'Cerrar la sesión inmersiva y volver al navegador', color: '#dc2626' }
         ];
 
         modes.forEach((m, idx) => {
-            const y = 350 + idx * 215;
+            const y = 310 + idx * 195;
             const isSel = (selectedIdx === idx);
 
             // Fondo del botón
             ctx.fillStyle = isSel ? m.color : 'rgba(30, 41, 59, 0.9)';
-            ctx.fillRect(100, y, 1848, 185);
+            ctx.fillRect(100, y, 1848, 170);
 
             // Borde brillante e indicador de puntero si está seleccionado
             ctx.strokeStyle = isSel ? '#38bdf8' : '#475569';
             ctx.lineWidth = isSel ? 10 : 4;
-            ctx.strokeRect(100, y, 1848, 185);
+            ctx.strokeRect(100, y, 1848, 170);
 
             if (isSel) {
                 // Flechas grandes llamativas
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 74px sans-serif';
+                ctx.font = 'bold 70px sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText('👉', 130, y + 115);
+                ctx.fillText('👉', 130, y + 105);
                 ctx.textAlign = 'right';
-                ctx.fillText('👈', 1918, y + 115);
+                ctx.fillText('👈', 1918, y + 105);
             }
 
             ctx.textAlign = 'center';
             ctx.fillStyle = '#ffffff';
-            ctx.font = isSel ? '900 58px sans-serif' : 'bold 52px sans-serif';
-            ctx.fillText(m.title, 1024, y + 80);
+            ctx.font = isSel ? '900 54px sans-serif' : 'bold 48px sans-serif';
+            ctx.fillText(m.title, 1024, y + 72);
 
             ctx.fillStyle = isSel ? '#e2e8f0' : '#94a3b8';
-            ctx.font = 'bold 36px sans-serif';
-            ctx.fillText(m.sub, 1024, y + 140);
+            ctx.font = 'bold 34px sans-serif';
+            ctx.fillText(m.sub, 1024, y + 130);
         });
 
         // Caja de ayuda con los controles en las gafas
         ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
-        ctx.fillRect(100, 1240, 1848, 380);
+        ctx.fillRect(100, 1315, 1848, 415);
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 6;
-        ctx.strokeRect(100, 1240, 1848, 380);
+        ctx.strokeRect(100, 1315, 1848, 415);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 50px sans-serif';
-        ctx.fillText('🕹️ GUÍA DE CONTROLES EN META QUEST:', 1024, 1315);
+        ctx.font = 'bold 48px sans-serif';
+        ctx.fillText('🕹️ GUÍA DE CONTROLES EN META QUEST:', 1024, 1385);
 
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = 'bold 40px sans-serif';
-        ctx.fillText('• Apuntar Láser y Gatillo: Elegir opción / Entrar', 1024, 1385);
-        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 1024, 1455);
-        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 1024, 1525);
-        ctx.fillText('• Soltar Freno: El vehículo recupera aceleración normal', 1024, 1585);
+        ctx.font = 'bold 38px sans-serif';
+        ctx.fillText('• Apuntar Láser y Gatillo: Elegir opción / Entrar', 1024, 1450);
+        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 1024, 1515);
+        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 1024, 1580);
+        ctx.fillText('• Opción 5 del menú: Salir de VR de inmediato', 1024, 1645);
 
         if (texture) texture.needsUpdate = true;
     }
@@ -392,7 +393,7 @@ function createVRMenuPanel() {
 
     render(0);
 
-    const planeGeo = new THREE.PlaneGeometry(2.4, 1.95);
+    const planeGeo = new THREE.PlaneGeometry(2.4, 2.05);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };
