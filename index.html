@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Metaverso Vial - ONG Educleta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            transition: filter 2s ease;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+
+        /* Efecto de embriaguez aplicado al canvas */
+        .drunk-effect {
+            filter: blur(3px) contrast(1.3) hue-rotate(15deg) saturate(1.5);
+            animation: wobble 4s infinite ease-in-out alternate;
+        }
+
+        @keyframes wobble {
+            0% {
+                transform: scale(1.05) rotate(-1deg);
+            }
+
+            100% {
+                transform: scale(1.05) rotate(1deg);
+            }
+        }
+
+        /* Notificación del celular */
+        .notification-popup {
+            animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%) translateX(-50%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0) translateX(-50%);
+                opacity: 1;
+            }
+        }
+
+        /* Controles táctiles móviles */
+        #touch-left,
+        #touch-right {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            z-index: 5;
+        }
+
+        #touch-left {
+            left: 0;
+        }
+
+        #touch-right {
+            right: 0;
+        }
+    </style>
+</head>
+
+<body class="text-white select-none">
+
+    <!-- Contenedor del render 3D -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Zonas táctiles para móvil -->
+    <div id="touch-left" class="hidden"></div>
+    <div id="touch-right" class="hidden"></div>
+
+    <!-- Capa de Interfaz de Usuario -->
+    <div id="ui-layer" class="flex flex-col items-center justify-center">
+
+        <!-- Menú Principal -->
+        <div id="main-menu"
+            class="pointer-events-auto bg-slate-900/90 p-8 rounded-2xl shadow-2xl border border-slate-700 max-w-md w-11/12 text-center backdrop-blur-sm transition-opacity duration-300">
+            <div class="mb-6">
+                <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">ONG
+                    Educleta</span>
+                <h1 class="text-3xl font-extrabold mt-2 text-white">Metaverso Vial</h1>
+                <p class="text-slate-400 mt-2 text-sm">Experimenta las consecuencias sin sufrir los riesgos. Elige tu
+                    estado para conducir:</p>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <button onclick="startGame('normal')"
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                    🚗 Conducción Normal
+                </button>
+                <button onclick="startGame('drunk')"
+                    class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                    🍺 Bajo efectos del Alcohol
+                </button>
+                <button onclick="startGame('distracted')"
+                    class="bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                    📱 Conducción Distraída
+                </button>
+            </div>
+
+            <div class="mt-6 text-xs text-slate-500">
+                Controles: Flechas ← Izquierda / Derecha → <br> (O toca los lados de la pantalla en móvil)
+            </div>
+        </div>
+
+        <!-- HUD en Juego -->
+        <div id="hud"
+            class="absolute top-4 left-4 right-4 flex justify-between items-start opacity-0 transition-opacity duration-300">
+            <div class="bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-700 backdrop-blur-sm">
+                <span class="text-slate-400 text-xs uppercase tracking-wider block">Estado</span>
+                <span id="hud-status" class="font-bold text-blue-400">Normal</span>
+            </div>
+            <div class="bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-700 backdrop-blur-sm text-right">
+                <span class="text-slate-400 text-xs uppercase tracking-wider block">Puntaje</span>
+                <span id="hud-score" class="font-bold text-white text-xl">0</span>
+            </div>
+        </div>
+
+        <!-- Pop-up de Distracción (Celular) -->
+        <div id="phone-distraction"
+            class="hidden pointer-events-auto absolute top-1/4 left-1/2 -translate-x-1/2 w-72 bg-white rounded-2xl shadow-2xl overflow-hidden notification-popup z-50">
+            <div class="bg-green-500 text-white p-3 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm">M</div>
+                    <span class="font-bold">Mamá</span>
+                </div>
+                <span class="text-xs opacity-80 text-nowrap">Ahora mismo</span>
+            </div>
+            <div class="p-4 text-slate-800 text-sm">
+                ¿A qué hora llegas? Acuérdate que mañana tienes que levantarte temprano...
+            </div>
+            <div class="border-t border-slate-100 p-2 text-center bg-slate-50">
+                <button onclick="dismissDistraction()"
+                    class="text-red-500 font-bold text-sm w-full py-2 hover:bg-slate-200 rounded">Cerrar
+                    Notificación</button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Game Over -->
+        <div id="game-over"
+            class="hidden pointer-events-auto absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-8 text-center z-50 backdrop-blur-md">
+            <h2 class="text-5xl font-black text-red-500 mb-4 animate-pulse">¡IMPACTO!</h2>
+            <div class="bg-red-900/50 border border-red-500/50 rounded-xl p-6 max-w-md mb-8">
+                <p id="game-over-message" class="text-lg text-white font-medium leading-relaxed">
+                    Mensaje de error.
+                </p>
+            </div>
+            <div class="text-slate-300 mb-8">
+                Sobreviviste: <span id="final-score" class="font-bold text-white text-2xl">0</span> metros.
+            </div>
+            <button onclick="resetGame()"
+                class="bg-white text-red-900 hover:bg-slate-200 font-bold py-3 px-8 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                Volver a intentar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Variables de estado del juego
+        let gameState = 'menu'; // menu, playing, gameover
+        let currentMode = 'normal'; // normal, drunk, distracted
+        let score = 0;
+        let speed = 0.8;
+
+        // Elementos UI
+        const elMainMenu = document.getElementById('main-menu');
+        const elGameOver = document.getElementById('game-over');
+        const elHud = document.getElementById('hud');
+        const elStatus = document.getElementById('hud-status');
+        const elScore = document.getElementById('hud-score');
+        const elMessage = document.getElementById('game-over-message');
+        const elCanvas = document.getElementById('game-canvas');
+        const elDistraction = document.getElementById('phone-distraction');
+
+        // Control de distracción
+        let distractionInterval;
+        let isDistractionActive = false;
+
+        // Configuración Three.js
+        const scene = new THREE.Scene();
+        // Niebla para ocultar la aparición de objetos y dar ambiente oscuro
+        scene.fog = new THREE.Fog(0x111111, 20, 80);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        // La cámara se sitúa detrás y ligeramente por encima del auto del jugador
+        camera.position.set(0, 3, 7);
+        camera.lookAt(0, 0, -10);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: elCanvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x111111);
+
+        // Iluminación ambiental y direccional mejorada
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+        dirLight.position.set(15, 30, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x446688, 0x111122, 0.5);
+        scene.add(hemiLight);
+
+        // Carretera con aceras / bermas
+        const roadGroup = new THREE.Group();
+        const roadGeo = new THREE.PlaneGeometry(13, 200);
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x1c1d21, roughness: 0.85 });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        road.receiveShadow = true;
+        roadGroup.add(road);
+
+        // Bordes de la carretera (Líneas continuas amarillas/blancas y bermas)
+        const shoulderGeo = new THREE.PlaneGeometry(0.3, 200);
+        const shoulderMat = new THREE.MeshBasicMaterial({ color: 0xe2b007 });
+        
+        const shoulderLeft = new THREE.Mesh(shoulderGeo, shoulderMat);
+        shoulderLeft.rotation.x = -Math.PI / 2;
+        shoulderLeft.position.set(-5.6, 0.01, 0);
+        roadGroup.add(shoulderLeft);
+
+        const shoulderRight = new THREE.Mesh(shoulderGeo, shoulderMat);
+        shoulderRight.rotation.x = -Math.PI / 2;
+        shoulderRight.position.set(5.6, 0.01, 0);
+        roadGroup.add(shoulderRight);
+
+        // Barreras laterales reflectantes / guardarraíl
+        const barrierGeo = new THREE.BoxGeometry(0.2, 0.5, 200);
+        const barrierMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.4 });
+        const barLeft = new THREE.Mesh(barrierGeo, barrierMat);
+        barLeft.position.set(-6.2, 0.25, 0);
+        roadGroup.add(barLeft);
+
+        const barRight = new THREE.Mesh(barrierGeo, barrierMat);
+        barRight.position.set(6.2, 0.25, 0);
+        roadGroup.add(barRight);
+
+        scene.add(roadGroup);
+
+        // Líneas divisoras de carril (simulación de movimiento)
+        const lines = [];
+        const lineGeo = new THREE.PlaneGeometry(0.2, 3.5);
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        
+        // Carriles dobles (separando 3 pistas: x=-3.5, x=0, x=3.5)
+        for (let i = 0; i < 14; i++) {
+            const lineL = new THREE.Mesh(lineGeo, lineMat);
+            lineL.rotation.x = -Math.PI / 2;
+            lineL.position.set(-1.8, 0.012, -i * 8 + 10);
+            scene.add(lineL);
+            lines.push(lineL);
+
+            const lineR = new THREE.Mesh(lineGeo, lineMat);
+            lineR.rotation.x = -Math.PI / 2;
+            lineR.position.set(1.8, 0.012, -i * 8 + 10);
+            scene.add(lineR);
+            lines.push(lineR);
+        }
+
+        // ==========================================
+        // FABRICADOR DE MODELOS DE VEHÍCULOS 3D
+        // ==========================================
+        const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16);
+        const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
+        const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 12);
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.8, roughness: 0.2 });
+        const windowMat = new THREE.MeshPhysicalMaterial({ 
+            color: 0x0f172a, 
+            roughness: 0.1, 
+            transmission: 0.6, 
+            thickness: 0.5,
+            reflectivity: 0.9 
+        });
+        const lightFrontMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const lightBackMat = new THREE.MeshBasicMaterial({ color: 0xff1e1e });
+
+        function createWheelMesh() {
+            const wheelGroup = new THREE.Group();
+            const tire = new THREE.Mesh(tireGeo, tireMat);
+            tire.rotation.z = Math.PI / 2;
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.rotation.z = Math.PI / 2;
+            wheelGroup.add(tire);
+            wheelGroup.add(rim);
+            return wheelGroup;
+        }
+
+        function createCar({ color = 0x2563eb, isPlayer = false, type = 'sedan' } = {}) {
+            const car = new THREE.Group();
+            const wheels = [];
+
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: color, 
+                metalness: 0.4, 
+                roughness: 0.3,
+                clearcoat: 0.5,
+                clearcoatRoughness: 0.2
+            });
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+
+            if (type === 'sedan' || isPlayer) {
+                // 1. Chasis Inferior
+                const chassisGeo = new THREE.BoxGeometry(1.9, 0.55, 3.8);
+                const chassis = new THREE.Mesh(chassisGeo, bodyMat);
+                chassis.position.y = 0.48;
+                car.add(chassis);
+
+                // 2. Parachoques delantero y trasero
+                const bumperFGeo = new THREE.BoxGeometry(1.86, 0.25, 0.3);
+                const bumperF = new THREE.Mesh(bumperFGeo, trimMat);
+                bumperF.position.set(0, 0.32, -1.9);
+                car.add(bumperF);
+
+                const bumperBGeo = new THREE.BoxGeometry(1.86, 0.25, 0.3);
+                const bumperB = new THREE.Mesh(bumperBGeo, trimMat);
+                bumperB.position.set(0, 0.32, 1.9);
+                car.add(bumperB);
+
+                // 3. Cabina / Techo aerodinámico
+                const cabinGeo = new THREE.BoxGeometry(1.56, 0.52, 2.0);
+                const cabin = new THREE.Mesh(cabinGeo, windowMat);
+                cabin.position.set(0, 0.95, -0.15);
+                car.add(cabin);
+
+                const roofGeo = new THREE.BoxGeometry(1.5, 0.06, 1.8);
+                const roof = new THREE.Mesh(roofGeo, bodyMat);
+                roof.position.set(0, 1.22, -0.15);
+                car.add(roof);
+
+                // 4. Espejos retrovisores
+                const mirrorGeo = new THREE.BoxGeometry(0.2, 0.12, 0.12);
+                const mirrorL = new THREE.Mesh(mirrorGeo, bodyMat);
+                mirrorL.position.set(-1.0, 0.85, -0.6);
+                const mirrorR = new THREE.Mesh(mirrorGeo, bodyMat);
+                mirrorR.position.set(1.0, 0.85, -0.6);
+                car.add(mirrorL);
+                car.add(mirrorR);
+
+                // 5. Faros Delanteros
+                const headLGeo = new THREE.BoxGeometry(0.35, 0.15, 0.1);
+                const headL = new THREE.Mesh(headLGeo, lightFrontMat);
+                headL.position.set(-0.65, 0.55, -1.9);
+                const headR = new THREE.Mesh(headLGeo, lightFrontMat);
+                headR.position.set(0.65, 0.55, -1.9);
+                car.add(headL);
+                car.add(headR);
+
+                // 6. Faros Traseros (Rojos / Freno)
+                const tailLGeo = new THREE.BoxGeometry(0.35, 0.14, 0.1);
+                const tailL = new THREE.Mesh(tailLGeo, lightBackMat);
+                tailL.position.set(-0.65, 0.55, 1.9);
+                const tailR = new THREE.Mesh(tailLGeo, lightBackMat);
+                tailR.position.set(0.65, 0.55, 1.9);
+                car.add(tailL);
+                car.add(tailR);
+
+                // Ruedas (4)
+                const wheelPositions = [
+                    [-0.95, 0.35, -1.15],
+                    [0.95, 0.35, -1.15],
+                    [-0.95, 0.35, 1.15],
+                    [0.95, 0.35, 1.15]
+                ];
+                wheelPositions.forEach(pos => {
+                    const w = createWheelMesh();
+                    w.position.set(pos[0], pos[1], pos[2]);
+                    car.add(w);
+                    wheels.push(w);
+                });
+
+                // Si es el jugador, agregar faros proyectores de luz hacia adelante y resplandor trasero
+                if (isPlayer) {
+                    const playerHeadlightL = new THREE.SpotLight(0xfff4d6, 2.5, 35, Math.PI / 6, 0.3, 1);
+                    playerHeadlightL.position.set(-0.6, 0.6, -1.8);
+                    playerHeadlightL.target.position.set(-0.6, 0, -20);
+                    car.add(playerHeadlightL);
+                    car.add(playerHeadlightL.target);
+
+                    const playerHeadlightR = new THREE.SpotLight(0xfff4d6, 2.5, 35, Math.PI / 6, 0.3, 1);
+                    playerHeadlightR.position.set(0.6, 0.6, -1.8);
+                    playerHeadlightR.target.position.set(0.6, 0, -20);
+                    car.add(playerHeadlightR);
+                    car.add(playerHeadlightR.target);
+
+                    // Pequeña luz de freno roja que ilumina la parte trasera
+                    const tailGlow = new THREE.PointLight(0xff1100, 1.2, 5);
+                    tailGlow.position.set(0, 0.6, 2.2);
+                    car.add(tailGlow);
+                }
+            } else if (type === 'suv' || type === 'van') {
+                // Modelo tipo Camioneta / SUV
+                const chassisGeo = new THREE.BoxGeometry(2.0, 0.7, 4.2);
+                const chassis = new THREE.Mesh(chassisGeo, bodyMat);
+                chassis.position.y = 0.65;
+                car.add(chassis);
+
+                const cabinGeo = new THREE.BoxGeometry(1.7, 0.7, 2.8);
+                const cabin = new THREE.Mesh(cabinGeo, windowMat);
+                cabin.position.set(0, 1.25, 0.2);
+                car.add(cabin);
+
+                const roofGeo = new THREE.BoxGeometry(1.65, 0.08, 2.7);
+                const roof = new THREE.Mesh(roofGeo, bodyMat);
+                roof.position.set(0, 1.62, 0.2);
+                car.add(roof);
+
+                // Faros
+                const headL = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.1), lightFrontMat);
+                headL.position.set(-0.7, 0.7, -2.1);
+                const headR = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.1), lightFrontMat);
+                headR.position.set(0.7, 0.7, -2.1);
+                car.add(headL);
+                car.add(headR);
+
+                const tailL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.1), lightBackMat);
+                tailL.position.set(-0.75, 1.0, 2.1);
+                const tailR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.1), lightBackMat);
+                tailR.position.set(0.75, 1.0, 2.1);
+                car.add(tailL);
+                car.add(tailR);
+
+                // Ruedas más grandes para SUV
+                [[-1.02, 0.42, -1.3], [1.02, 0.42, -1.3], [-1.02, 0.42, 1.3], [1.02, 0.42, 1.3]].forEach(pos => {
+                    const w = createWheelMesh();
+                    w.scale.set(1.15, 1.15, 1.15);
+                    w.position.set(pos[0], pos[1], pos[2]);
+                    car.add(w);
+                    wheels.push(w);
+                });
+            }
+
+            // Guardar referencia de ruedas para animar giro
+            car.userData = { wheels: wheels, type: type };
+            return car;
+        }
+
+        // Crear Vehículo del Jugador (Deportivo Azul)
+        const player = createCar({ color: 0x2563eb, isPlayer: true, type: 'sedan' });
+        player.position.set(0, 0, 0);
+        scene.add(player);
+
+        // Paleta de colores para tráfico
+        const trafficColors = [
+            0xef4444, // Rojo
+            0xf59e0b, // Ámbar / Naranja
+            0x10b981, // Verde esmeralda
+            0x8b5cf6, // Violeta
+            0xe2e8f0, // Blanco perla
+            0x334155, // Gris oscuro metálico
+            0xd97706  // Mostaza
+        ];
+
+        // Grupo de obstáculos
+        const obstacles = [];
+        const vehicleTypes = ['sedan', 'suv', 'sedan'];
+
+        function spawnObstacle() {
+            const randomColor = trafficColors[Math.floor(Math.random() * trafficColors.length)];
+            const randomType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+            const obs = createCar({ color: randomColor, isPlayer: false, type: randomType });
+            
+            obs.position.z = -80 - (Math.random() * 40);
+            const lanes = [-3.5, 0, 3.5];
+            obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+            scene.add(obs);
+            obstacles.push(obs);
+        }
+
+        // Crear 4 obstáculos iniciales
+        for (let i = 0; i < 4; i++) {
+            setTimeout(spawnObstacle, i * 600);
+        }
+
+        // Controles y movimiento
+        let targetX = 0;
+        let isLeftDown = false;
+        let isRightDown = false;
+
+        // Eventos Teclado
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') isLeftDown = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') isRightDown = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') isLeftDown = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') isRightDown = false;
+        });
+
+        // Eventos Táctiles Móvil
+        const tLeft = document.getElementById('touch-left');
+        const tRight = document.getElementById('touch-right');
+
+        tLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') isLeftDown = true; });
+        tLeft.addEventListener('touchend', (e) => { e.preventDefault(); isLeftDown = false; });
+
+        tRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') isRightDown = true; });
+        tRight.addEventListener('touchend', (e) => { e.preventDefault(); isRightDown = false; });
+
+        function startGame(mode) {
+            currentMode = mode;
+            gameState = 'playing';
+            score = 0;
+            targetX = 0;
+            player.position.x = 0;
+            player.rotation.set(0, 0, 0);
+            speed = 0.8;
+            isDistractionActive = false;
+
+            // Ocultar menús, mostrar HUD
+            elMainMenu.classList.add('hidden');
+            elGameOver.classList.add('hidden');
+            elHud.classList.remove('opacity-0');
+            tLeft.classList.remove('hidden');
+            tRight.classList.remove('hidden');
+
+            // Resetear obstáculos
+            obstacles.forEach(obs => {
+                obs.position.z = -40 - (Math.random() * 60);
+                const lanes = [-3.5, 0, 3.5];
+                obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+            });
+
+            // Aplicar efectos según el modo
+            elCanvas.className = ''; // reset classes
+            clearInterval(distractionInterval);
+            elDistraction.classList.add('hidden');
+
+            if (mode === 'normal') {
+                elStatus.innerText = 'Normal';
+                elStatus.className = 'font-bold text-blue-400';
+                scene.fog.color.setHex(0x111111);
+                renderer.setClearColor(0x111111);
+            }
+            else if (mode === 'drunk') {
+                elStatus.innerText = 'Ebrio';
+                elStatus.className = 'font-bold text-purple-400 animate-pulse';
+                // El canvas se vuelve borroso y oscilante
+                elCanvas.classList.add('drunk-effect');
+                // La niebla se vuelve ligeramente morada desorientadora
+                scene.fog.color.setHex(0x2a113a);
+                renderer.setClearColor(0x2a113a);
+            }
+            else if (mode === 'distracted') {
+                elStatus.innerText = 'Distraído';
+                elStatus.className = 'font-bold text-orange-400';
+                // Iniciar el pop-up invasivo del celular
+                distractionInterval = setInterval(triggerDistraction, 4000);
+            }
+        }
+
+        function triggerDistraction() {
+            if (gameState !== 'playing') return;
+            isDistractionActive = true;
+            elDistraction.classList.remove('hidden');
+            // Al estar distraído, forzamos un leve desvío involuntario
+            targetX += (Math.random() > 0.5 ? 1 : -1) * 1.5;
+        }
+
+        function dismissDistraction() {
+            isDistractionActive = false;
+            elDistraction.classList.add('hidden');
+        }
+
+        function triggerGameOver() {
+            gameState = 'gameover';
+            elHud.classList.add('opacity-0');
+            tLeft.classList.add('hidden');
+            tRight.classList.add('hidden');
+            clearInterval(distractionInterval);
+            elDistraction.classList.add('hidden');
+            elCanvas.className = ''; // Quitar filtros
+
+            document.getElementById('final-score').innerText = Math.floor(score);
+
+            // Asignar mensaje reflexivo (Core de la ONG Educleta)
+            if (currentMode === 'normal') {
+                elMessage.innerText = "Incluso en condiciones normales, la vía exige tu 100% de atención. Imagina si le sumas alcohol o celular.";
+            } else if (currentMode === 'drunk') {
+                elMessage.innerHTML = "<strong class='text-purple-300'>Sensación de lentitud:</strong> Tus reflejos estaban alterados. El alcohol retrasa el tiempo que tarda tu cerebro en enviar la señal a tus manos para esquivar. Un segundo de retraso a 60km/h es fatal.";
+            } else if (currentMode === 'distracted') {
+                elMessage.innerHTML = "<strong class='text-orange-300'>Ceguera inatencional:</strong> Mirar la pantalla por 2 segundos a 60 km/h equivale a conducir 33 metros con los ojos vendados. El choque era inminente.";
+            }
+
+            // Destello rojo de choque
+            const flash = document.createElement('div');
+            flash.style.position = 'absolute';
+            flash.style.inset = '0';
+            flash.style.backgroundColor = 'red';
+            flash.style.zIndex = '999';
+            flash.style.opacity = '1';
+            flash.style.transition = 'opacity 0.5s';
+            flash.style.pointerEvents = 'none';
+            document.body.appendChild(flash);
+
+            setTimeout(() => {
+                flash.style.opacity = '0';
+                elGameOver.classList.remove('hidden');
+                setTimeout(() => flash.remove(), 500);
+            }, 50);
+        }
+
+        function resetGame() {
+            elGameOver.classList.add('hidden');
+            elMainMenu.classList.remove('hidden');
+
+            // Reset cámara
+            camera.position.x = 0;
+            camera.rotation.z = 0;
+            player.position.set(0, 0, 0);
+            player.rotation.set(0, 0, 0);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameState === 'playing') {
+                // Actualizar Puntuación
+                score += speed * 0.5;
+                elScore.innerText = Math.floor(score);
+
+                // Aumentar velocidad progresivamente
+                speed += 0.0005;
+
+                // Lógica de Movimiento Deseado
+                if (isLeftDown) targetX -= 0.15;
+                if (isRightDown) targetX += 0.15;
+
+                // Limitar movimiento a los carriles
+                targetX = Math.max(-4, Math.min(4, targetX));
+
+                let prevX = player.position.x;
+
+                // APLICACIÓN DE LA DISONANCIA COGNITIVA (Latencia y Pérdida de Control)
+                if (currentMode === 'drunk') {
+                    // LAG DE INPUT: La interpolación es lentísima, simulando reflejos torpes
+                    player.position.x += (targetX - player.position.x) * 0.02;
+                    // BALANCEO: El auto se desvía solo como si no hubiera control fino
+                    player.position.x += Math.sin(Date.now() * 0.003) * 0.03;
+
+                    // La cámara también se marea
+                    camera.position.x = player.position.x * 0.5 + Math.sin(Date.now() * 0.001) * 0.5;
+                    camera.rotation.z = Math.sin(Date.now() * 0.002) * 0.05;
+                } else {
+                    // CONDUCCIÓN NORMAL: Respuesta rápida e interpolación fina
+                    player.position.x += (targetX - player.position.x) * 0.2;
+                    camera.position.x = player.position.x * 0.5;
+                    camera.rotation.z = 0;
+                }
+
+                // Inclinación suave del auto al doblar (Roll y Yaw dinámico)
+                const deltaX = player.position.x - prevX;
+                player.rotation.z = -deltaX * 0.7; // Balanceo
+                player.rotation.y = -deltaX * 0.5; // Giro sutil
+
+                // Rotar ruedas del jugador
+                if (player.userData && player.userData.wheels) {
+                    player.userData.wheels.forEach(w => {
+                        w.rotation.x -= speed * 0.6;
+                    });
+                }
+
+                // Animar líneas del suelo
+                lines.forEach(line => {
+                    line.position.z += speed;
+                    if (line.position.z > 8) {
+                        line.position.z = -100;
+                    }
+                });
+
+                // Animar y chequear obstáculos
+                obstacles.forEach(obs => {
+                    obs.position.z += speed * 0.75; // Los autos de adelante se mueven a velocidad de tráfico
+
+                    // Rotar ruedas de los autos en tráfico
+                    if (obs.userData && obs.userData.wheels) {
+                        obs.userData.wheels.forEach(w => {
+                            w.rotation.x -= speed * 0.45;
+                        });
+                    }
+
+                    // Colisión Bounding Box ajustada a la carrocería del auto
+                    const distX = Math.abs(player.position.x - obs.position.x);
+                    const distZ = Math.abs(player.position.z - obs.position.z);
+
+                    if (distX < 1.7 && distZ < 3.4) {
+                        triggerGameOver();
+                    }
+
+                    // Reciclar obstáculos que pasaron
+                    if (obs.position.z > 8) {
+                        obs.position.z = -65 - (Math.random() * 45);
+                        const lanes = [-3.5, 0, 3.5];
+                        obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+                    }
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Manejo de redimensionamiento de ventana
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Iniciar el bucle 3D
+        window.onload = function () {
+            animate();
+        }
+    </script>
+</body>
+
+</html>
