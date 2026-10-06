@@ -45,10 +45,21 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 
-// WebXR para Meta Quest 2 / 3 / Pro
+// WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
 let isVRActive = false;
 let vrSession = null;
+
+// Rig de Cámara para sincronización de movimiento 6DOF en Realidad Virtual
+const xrCameraRig = new THREE.Group();
+xrCameraRig.add(camera);
+scene.add(xrCameraRig);
+
+// Panel 3D Flotante de Game Over dentro de VR
+const vrPanel = createVRPanel('¡IMPACTO FATAL!', 'Presiona cualquier botón para reiniciar', '🔄 REINICIAR PARTIDA');
+vrPanel.position.set(0, 1.4, -2.5);
+vrPanel.visible = false;
+scene.add(vrPanel);
 
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
@@ -353,6 +364,12 @@ function triggerGameOver(obstacleType) {
             (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
     }
 
+    // Mostrar panel flotante 3D si estamos en Realidad Virtual
+    if (renderer.xr.isPresenting && vrPanel) {
+        vrPanel.position.set(player.position.x - 0.5, 1.4, player.position.z - 2.5);
+        vrPanel.visible = true;
+    }
+
     elCanvas.className = '';
     const flash = document.createElement('div');
     flash.className = 'absolute inset-0 bg-red-600 z-[99] pointer-events-none opacity-90 transition-opacity duration-1000';
@@ -369,6 +386,7 @@ function triggerGameOver(obstacleType) {
 function resetGame() {
     gameState = 'menu';
     if (elMobileControls) elMobileControls.classList.add('hidden');
+    if (vrPanel) vrPanel.visible = false;
     elGameOver.classList.add('menu-hidden');
     elGameOver.classList.add('hidden');
     elMainMenu.classList.remove('menu-hidden');
@@ -376,14 +394,59 @@ function resetGame() {
     elMainMenu.classList.add('menu-visible');
     player.position.set(0, 0, 0);
     player.rotation.set(0, 0, 0);
-    camera.position.set(0, 2.5, 7.0);
-    camera.lookAt(0, 1.0, -10);
+    
+    if (renderer.xr.isPresenting) {
+        xrCameraRig.position.set(0, 0, 0);
+        // Si está en VR, reiniciar directamente la carrera
+        startGame('normal');
+    } else {
+        camera.position.set(0, 2.5, 7.0);
+        camera.lookAt(0, 1.0, -10);
+    }
+
     if (cabin) cabin.visible = true;
     if (roof) roof.visible = true;
 }
 
 // Bucle de Animación y Física
 function animate() {
+    // Lectura de mandos Meta Quest en cualquier estado para reinicio / controles
+    if (renderer.xr.isPresenting) {
+        const session = renderer.xr.getSession();
+        if (session && session.inputSources) {
+            for (const source of session.inputSources) {
+                if (source.gamepad) {
+                    const gp = source.gamepad;
+                    // En Game Over o Menú: presionar cualquier botón (Gatillo, Botón A/B/X/Y) reinicia la partida
+                    if (gameState === 'gameover' || gameState === 'crashing' || gameState === 'menu') {
+                        if (gp.buttons && gp.buttons.some(b => b && b.pressed)) {
+                            resetGame();
+                            return;
+                        }
+                    }
+
+                    // En partida: joystick para dirección y gatillo para frenar
+                    if (gameState === 'playing') {
+                        if (gp.axes && gp.axes.length >= 2) {
+                            const stickX = gp.axes[2] || gp.axes[0] || 0;
+                            if (Math.abs(stickX) > 0.12) {
+                                targetX += stickX * 0.22;
+                            }
+                        }
+                        // Botón A/X o Gatillo para frenar
+                        if (gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) {
+                            isBraking = true;
+                        }
+                        // Botón B/Y o Grip para desacelerar
+                        if (gp.buttons && gp.buttons[1] && gp.buttons[1].pressed) {
+                            isDownDown = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if (gameState === 'playing') {
         // Dinámica de aceleración y freno
         if (isBraking) {
@@ -434,24 +497,12 @@ function animate() {
             w.children[1].rotation.x -= speedMultiplier * 0.6;
         });
 
-        // Actualización de Cámara
+        // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            camera.position.set(player.position.x - 0.5, 1.45, player.position.z + 0.3);
-            const session = renderer.xr.getSession();
-            if (session && session.inputSources) {
-                for (const source of session.inputSources) {
-                    if (source.gamepad) {
-                        const gp = source.gamepad;
-                        if (gp.axes && gp.axes.length >= 4) {
-                            const stickX = gp.axes[2];
-                            if (Math.abs(stickX) > 0.15) targetX += stickX * 0.18;
-                        }
-                        if (gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) {
-                            isBraking = true;
-                        }
-                    }
-                }
-            }
+            // Mover el Rig VR exactamente con el asiento del piloto
+            xrCameraRig.position.set(player.position.x - 0.5, 1.35, player.position.z + 0.1);
+            if (cabin) cabin.visible = false;
+            if (roof) roof.visible = false;
         } else if (cameraMode === 'fpv') {
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;

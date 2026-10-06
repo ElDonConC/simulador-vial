@@ -1,5 +1,5 @@
 // ============================================================
-// MODELOS Y ELEMENTOS DEL MUNDO (PISTA, CALLES, EDIFICIOS, AUTOS, PEATONES)
+// MODELOS Y ELEMENTOS DEL MUNDO (PISTA, CALLES, EDIFICIOS, AUTOS, PEATONES, UI 3D VR)
 // ============================================================
 
 // Materiales globales optimizados
@@ -207,4 +207,46 @@ function createPedestrian() {
     group.add(body, head, legL, legR);
     group.userData = { type: 'pedestrian', speedX: 0, legs: [legL, legR] };
     return group;
+}
+
+// Panel Flotante 3D para Game Over / Menú dentro de Realidad Virtual (Meta Quest)
+function createVRPanel(title, subtitle, actionText) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Fondo panel
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.roundRect ? ctx.roundRect(10, 10, 492, 236, 24) : ctx.fillRect(10, 10, 492, 236);
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Textos
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, 256, 75);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(subtitle, 256, 125);
+
+    // Botón / Instrucción
+    ctx.fillStyle = '#3b82f6';
+    ctx.roundRect ? ctx.roundRect(86, 160, 340, 56, 16) : ctx.fillRect(86, 160, 340, 56);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText(actionText, 256, 196);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const planeGeo = new THREE.PlaneGeometry(2.4, 1.2);
+    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.userData = { canvas, ctx, texture };
+    return mesh;
 }
