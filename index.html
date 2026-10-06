@@ -536,100 +536,122 @@
         }
 
         // ============================================================
-        // VEHÍCULO DEL JUGADOR: CABINA POV DETALLADA
+        // VEHÍCULO COMPLETO DEL JUGADOR (CABINA + CARROCERÍA 3D)
         // ============================================================
         const player = new THREE.Group();
         scene.add(player);
 
-        // Capó exterior visible desde la cabina
-        const hoodGeo = new THREE.BoxGeometry(2.4, 0.35, 2.8);
-        const hoodMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6, roughness: 0.25, clearcoat: 0.5 });
-        const hood = new THREE.Mesh(hoodGeo, hoodMat);
-        hood.position.set(0, 0.72, -1.8);
-        hood.rotation.x = 0.04;
+        const playerBodyMat = new THREE.MeshStandardMaterial({ 
+            color: 0x2563eb, 
+            metalness: 0.65, 
+            roughness: 0.25, 
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.2
+        });
+        const playerTrimMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+        const playerGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x020617, roughness: 0.1, transmission: 0.7, opacity: 0.85, transparent: true });
+
+        // 1. Chasis y Carrocería inferior completa
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.65, 4.4), playerBodyMat);
+        chassis.position.y = 0.55;
+        chassis.castShadow = true;
+        chassis.receiveShadow = true;
+        player.add(chassis);
+
+        // 2. Capó aerodinámico
+        const hoodGeo = new THREE.BoxGeometry(2.1, 0.25, 1.8);
+        const hood = new THREE.Mesh(hoodGeo, playerBodyMat);
+        hood.position.set(0, 0.82, -1.2);
+        hood.rotation.x = 0.05;
         hood.castShadow = true;
-        hood.receiveShadow = true;
         player.add(hood);
 
-        // Tablero y consola interior
-        const dashGeo = new THREE.BoxGeometry(2.6, 0.45, 0.8);
-        const dashMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
-        const dashboard = new THREE.Mesh(dashGeo, dashMat);
-        dashboard.position.set(0, 0.82, -0.9);
+        // 3. Cabina / Techo / Ventanas
+        const cabinGeo = new THREE.BoxGeometry(1.9, 0.65, 2.2);
+        const cabin = new THREE.Mesh(cabinGeo, playerGlassMat);
+        cabin.position.set(0, 1.25, 0.2);
+        cabin.castShadow = true;
+        player.add(cabin);
+
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.6), playerBodyMat);
+        roof.position.set(0, 1.58, 0.25);
+        player.add(roof);
+
+        // 4. Tablero y consola interior visible en FPV
+        const dashboard = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, 0.7), playerTrimMat);
+        dashboard.position.set(0, 0.95, -0.4);
         dashboard.castShadow = true;
-        dashboard.receiveShadow = true;
         player.add(dashboard);
 
-        // Pantalla de instrumentos detrás del volante
-        const clusterGeo = new THREE.PlaneGeometry(0.7, 0.28);
-        const clusterMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
-        const cluster = new THREE.Mesh(clusterGeo, clusterMat);
-        cluster.position.set(-0.6, 0.95, -0.68);
-        cluster.rotation.x = -Math.PI / 7;
+        // Pantalla de instrumentos
+        const cluster = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.22), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+        cluster.position.set(-0.5, 1.1, -0.2);
+        cluster.rotation.x = -Math.PI / 6;
         player.add(cluster);
 
-        // Espejo retrovisor central
-        const mirrorGeo = new THREE.BoxGeometry(0.5, 0.16, 0.06);
-        const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.8 });
-        const rearMirror = new THREE.Mesh(mirrorGeo, mirrorMat);
-        rearMirror.position.set(0, 1.45, -0.6);
-        player.add(rearMirror);
-
-        // Volante 3D deportivo
+        // 5. Volante 3D animado
         const wheelGroup = new THREE.Group();
-        const rimGeo = new THREE.TorusGeometry(0.28, 0.038, 16, 32);
-        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
-        const wheelRim = new THREE.Mesh(rimGeo, wheelMat);
-        wheelRim.castShadow = true;
-
-        const centerCap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16), wheelMat);
+        const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.035, 16, 32), playerTrimMat);
+        const centerCap = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.04, 16), playerTrimMat);
         centerCap.rotation.x = Math.PI / 2;
-        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.02), wheelMat);
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.035, 0.02), playerTrimMat);
         wheelGroup.add(wheelRim, centerCap, spoke);
-
-        wheelGroup.position.set(-0.6, 0.92, -0.55);
+        wheelGroup.position.set(-0.5, 1.05, -0.05);
         wheelGroup.rotation.x = -Math.PI / 5;
         player.add(wheelGroup);
 
-        // Luces interiores sutiles para iluminar el volante
-        const cabinLight = new THREE.PointLight(0x38bdf8, 0.7, 2.5);
-        cabinLight.position.set(-0.6, 1.5, -0.2);
+        // Luz interior cabina
+        const cabinLight = new THREE.PointLight(0x38bdf8, 0.6, 2.5);
+        cabinLight.position.set(-0.5, 1.5, 0.2);
         player.add(cabinLight);
 
-        // Faros potentes del jugador proyectados hacia la carretera
-        const headlightL = new THREE.SpotLight(0xfffbeb, 4.0, 70, Math.PI / 4, 0.35, 1);
-        headlightL.position.set(-0.8, 0.65, -2.8);
+        // 6. Ruedas 3D con neumáticos y llantas
+        const playerWheels = [];
+        const pTireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16);
+        const pTireMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+        const pRimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 12);
+        const pRimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.1 });
+        const wheelCoords = [[-1.15, 0.38, -1.3], [1.15, 0.38, -1.3], [-1.15, 0.38, 1.3], [1.15, 0.38, 1.3]];
+        wheelCoords.forEach(pos => {
+            const wg = new THREE.Group();
+            const tire = new THREE.Mesh(pTireGeo, pTireMat);
+            tire.rotation.z = Math.PI / 2;
+            const rim = new THREE.Mesh(pRimGeo, pRimMat);
+            rim.rotation.z = Math.PI / 2;
+            wg.add(tire, rim);
+            wg.position.set(pos[0], pos[1], pos[2]);
+            wg.castShadow = true;
+            player.add(wg);
+            playerWheels.push(wg);
+        });
+
+        // 7. Luces traseras y Faros delanteros
+        const tailGeo = new THREE.BoxGeometry(0.45, 0.18, 0.1);
+        const tailMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 3.0 });
+        const tailL = new THREE.Mesh(tailGeo, tailMat);
+        tailL.position.set(-0.8, 0.68, 2.2);
+        const tailR = new THREE.Mesh(tailGeo, tailMat);
+        tailR.position.set(0.8, 0.68, 2.2);
+        player.add(tailL, tailR);
+
+        // Faros proyectores del jugador hacia adelante
+        const headlightL = new THREE.SpotLight(0xfffbeb, 4.5, 75, Math.PI / 4, 0.35, 1);
+        headlightL.position.set(-0.8, 0.68, -2.1);
         headlightL.target.position.set(-0.8, 0, -45);
         headlightL.castShadow = true;
         player.add(headlightL);
         player.add(headlightL.target);
 
-        const headlightR = new THREE.SpotLight(0xfffbeb, 4.0, 70, Math.PI / 4, 0.35, 1);
-        headlightR.position.set(0.8, 0.65, -2.8);
+        const headlightR = new THREE.SpotLight(0xfffbeb, 4.5, 75, Math.PI / 4, 0.35, 1);
+        headlightR.position.set(0.8, 0.68, -2.1);
         headlightR.target.position.set(0.8, 0, -45);
         headlightR.castShadow = true;
         player.add(headlightR);
         player.add(headlightR.target);
 
-        // Montar la cámara DENTRO del grupo del jugador para que se mueva exactamente con él
-        player.add(camera);
-
-        // Posiciones de cámara relativas al auto
-        function updateCameraPosition() {
-            if (cameraMode === 'fpv') {
-                camera.position.set(-0.6, 1.25, -0.05); // Ojos del conductor
-                camera.rotation.set(0, 0, 0);
-            } else {
-                camera.position.set(0, 3.2, 5.5); // Vista 3ra persona detrás del auto
-                camera.rotation.set(-0.15, 0, 0);
-            }
-        }
-        updateCameraPosition();
-
         function toggleCameraView() {
             cameraMode = (cameraMode === 'fpv') ? 'tpv' : 'fpv';
             elCamLabel.innerText = (cameraMode === 'fpv') ? 'Cámara: 1ra Persona' : 'Cámara: 3ra Persona';
-            updateCameraPosition();
         }
 
         window.addEventListener('keydown', (e) => {
@@ -957,19 +979,9 @@
                     player.position.x += (targetX - player.position.x) * 0.02;
                     // Balanceo involuntario
                     player.position.x += Math.sin(Date.now() * 0.002) * 0.08;
-
-                    // Desorientación en cámara (cabeceo de conductor)
-                    if (cameraMode === 'fpv') {
-                        camera.rotation.z = Math.sin(Date.now() * 0.0015) * 0.06;
-                        camera.position.x = -0.6 + Math.sin(Date.now() * 0.002) * 0.08;
-                    }
                 } else {
                     // Respuesta ágil
                     player.position.x += (targetX - player.position.x) * 0.14;
-                    if (cameraMode === 'fpv') {
-                        camera.rotation.z = (targetX - player.position.x) * 0.04; // inclinación de la mirada al girar
-                        camera.position.x = -0.6;
-                    }
                 }
 
                 // Giro dinámico del volante y carrocería
@@ -977,6 +989,28 @@
                 wheelGroup.rotation.z = steerAngle;
                 player.rotation.z = steerAngle * 0.06;
                 player.rotation.y = steerAngle * 0.04;
+
+                // Rotar ruedas del jugador con la velocidad
+                playerWheels.forEach(w => {
+                    w.children[0].rotation.x -= speedMultiplier * 0.6;
+                    w.children[1].rotation.x -= speedMultiplier * 0.6;
+                });
+
+                // ACTUALIZAR CÁMARA (1ra Persona / 3ra Persona) SIGUIENDO AL AUTO
+                if (cameraMode === 'fpv') {
+                    // Ojos del conductor sentados a la izquierda de la cabina
+                    const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.05 : 0;
+                    camera.position.set(player.position.x - 0.5 + headBob, 1.45, player.position.z + 0.3);
+                    camera.rotation.set(
+                        -0.02,
+                        (targetX - player.position.x) * 0.04,
+                        currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.06 : (targetX - player.position.x) * 0.03
+                    );
+                } else {
+                    // Cámara 3ra persona detrás del auto
+                    camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
+                    camera.lookAt(player.position.x, 1.1, player.position.z - 15);
+                }
 
                 // Animar ciudad y semáforos
                 roadChunks.forEach(chunk => {
