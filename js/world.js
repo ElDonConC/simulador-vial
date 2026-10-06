@@ -272,52 +272,54 @@ function createVRMenuPanel() {
         ctx.strokeRect(6, 6, 500, 408);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 30px sans-serif';
+        ctx.font = 'bold 28px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('METAVERSO VIAL VR', 256, 44);
+        ctx.fillText('METAVERSO VIAL VR', 256, 40);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '15px sans-serif';
-        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para elegir modo', 256, 74);
+        ctx.font = '14px sans-serif';
+        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para elegir o ajustar', 256, 66);
 
+        const currentVolPercent = Math.round(currentVolume * 100);
         const modes = [
             { title: '1. Conducción Atenta (Lúcido)', color: selectedIdx === 0 ? '#2563eb' : '#1e293b', text: '#ffffff' },
             { title: '2. Bajo Efectos del Alcohol 🍺', color: selectedIdx === 1 ? '#9333ea' : '#1e293b', text: '#ffffff' },
-            { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' }
+            { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' },
+            { title: `🔊 Volumen de Audio: ${currentVolPercent}% (Gatillo para cambiar)`, color: selectedIdx === 3 ? '#0284c7' : '#0f172a', text: '#38bdf8' }
         ];
 
         modes.forEach((m, idx) => {
-            const y = 96 + idx * 64;
+            const y = 84 + idx * 54;
             ctx.fillStyle = m.color;
-            ctx.fillRect(30, y, 452, 52);
+            ctx.fillRect(30, y, 452, 46);
 
             if (selectedIdx === idx) {
                 ctx.strokeStyle = '#38bdf8';
                 ctx.lineWidth = 3;
-                ctx.strokeRect(30, y, 452, 52);
+                ctx.strokeRect(30, y, 452, 46);
             }
 
             ctx.fillStyle = m.text;
-            ctx.font = 'bold 18px sans-serif';
-            ctx.fillText(m.title, 256, y + 33);
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText(m.title, 256, y + 29);
         });
 
         // Caja de ayuda con los controles en las gafas
         ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
-        ctx.fillRect(30, 298, 452, 100);
+        ctx.fillRect(30, 308, 452, 94);
         ctx.strokeStyle = '#475569';
         ctx.lineWidth = 2;
-        ctx.strokeRect(30, 298, 452, 100);
+        ctx.strokeRect(30, 308, 452, 94);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.fillText('🕹️ CONTROLES EN META QUEST:', 256, 322);
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('🕹️ CONTROLES EN META QUEST:', 256, 328);
 
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = '13px sans-serif';
-        ctx.fillText('• Joystick (Palanca): Girar a la izquierda / derecha', 256, 348);
-        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 256, 370);
-        ctx.fillText('• Soltar Freno: Acelera automáticamente a velocidad normal', 256, 388);
+        ctx.font = '12px sans-serif';
+        ctx.fillText('• Joystick (Palanca): Girar auto | Arriba/Abajo en Menú', 256, 348);
+        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 256, 368);
+        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 256, 386);
     }
 
     render(0);

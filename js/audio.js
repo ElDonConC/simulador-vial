@@ -2,17 +2,37 @@
 // AUDIO SÍNTESIS CON TONE.JS (MOTOR REALISTA, FRENADO, IMPACTO, ALERTAS)
 // ============================================================
 let audioInitialized = false;
+let masterGainNode = null;
+let currentVolume = 0.5; // Volumen inicial equilibrado y moderado (50%)
 let engineOsc1, engineOsc2, engineNoise, engineFilter, engineGain;
 let skidGain, skidFilter, skidFMOsc, skidNoise;
 let crashSynth, crashSub, notificationSynth, hornSynth;
+
+function setMasterVolume(val) {
+    currentVolume = Math.max(0, Math.min(1, val));
+    if (masterGainNode) {
+        masterGainNode.gain.rampTo(currentVolume * 0.7, 0.05);
+    }
+    // Sincronizar sliders e indicadores UI
+    const slider = document.getElementById('volume-slider');
+    const label = document.getElementById('volume-label');
+    if (slider) slider.value = Math.round(currentVolume * 100);
+    if (label) label.innerText = Math.round(currentVolume * 100) + '%';
+    
+    // Si estamos en VR, refrescar panel de menú
+    if (window.vrMenuPanel && window.vrMenuPanel.userData && window.vrMenuPanel.userData.render) {
+        window.vrMenuPanel.userData.render(window.vrSelectedModeIdx || 0);
+    }
+}
 
 function initAudio() {
     if (audioInitialized) return;
     try {
         if (window.Tone) {
             Tone.start().then(() => {
-                // Master Limiter / Volume
-                const masterGain = new Tone.Gain(0.9).toDestination();
+                // Master Limiter / Volume moderado por defecto
+                masterGainNode = new Tone.Gain(currentVolume * 0.7).toDestination();
+                const masterGain = masterGainNode;
 
                 // 1. MOTOR REALISTA: Dual Oscillators (Fat Sawtooth + Triangle) + Brown Noise Rumble
                 engineGain = new Tone.Gain(0.0).connect(masterGain);

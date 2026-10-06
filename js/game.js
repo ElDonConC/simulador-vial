@@ -206,7 +206,28 @@ bindTouchButton(btnBrake, () => { isBraking = true; }, () => { isBraking = false
 
 function toggleCameraView() {
     cameraMode = (cameraMode === 'fpv') ? 'tpv' : 'fpv';
-    elCamLabel.innerText = (cameraMode === 'fpv') ? 'Cámara: 1ra Persona' : 'Cámara: 3ra Persona';
+    elCamLabel.innerText = (cameraMode === 'fpv') ? '1ra Persona' : '3ra Persona';
+}
+
+function toggleVolumePopover() {
+    const pop = document.getElementById('volume-popover');
+    if (pop) {
+        pop.classList.toggle('hidden');
+    }
+}
+
+let lastVolumeLevel = 0.5;
+function toggleMuteAudio() {
+    if (currentVolume > 0) {
+        lastVolumeLevel = currentVolume;
+        setMasterVolume(0);
+        const btn = document.getElementById('btn-mute');
+        if (btn) btn.innerText = 'Restaurar';
+    } else {
+        setMasterVolume(lastVolumeLevel || 0.5);
+        const btn = document.getElementById('btn-mute');
+        if (btn) btn.innerText = 'Silenciar';
+    }
 }
 
 function toggleQuestModal(show) {
@@ -511,7 +532,7 @@ function animate() {
                 const now = Date.now();
                 if (now - vrStickDebounce > 260) {
                     if (stickYInput > 0.3) {
-                        vrSelectedModeIdx = Math.min(2, vrSelectedModeIdx + 1);
+                        vrSelectedModeIdx = Math.min(3, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
                         vrStickDebounce = now;
                     } else if (stickYInput < -0.3) {
@@ -521,10 +542,22 @@ function animate() {
                     }
                 }
 
-                // Iniciar juego con Gatillo o Botón A/X
+                // Iniciar juego o alternar volumen con Gatillo o Botón A/X
                 if (triggerPressed || buttonPrimary) {
-                    const modes = ['normal', 'drunk', 'distracted'];
-                    startGame(modes[vrSelectedModeIdx]);
+                    if (vrSelectedModeIdx === 3) {
+                        const now = Date.now();
+                        if (now - vrStickDebounce > 280) {
+                            // Alternar volumen en ciclos: 50% -> 75% -> 100% -> 25% -> 50%
+                            let nextVol = currentVolume + 0.25;
+                            if (nextVol > 1.05) nextVol = 0.25;
+                            setMasterVolume(nextVol);
+                            vrMenuPanel.userData.render(3);
+                            vrStickDebounce = now;
+                        }
+                    } else {
+                        const modes = ['normal', 'drunk', 'distracted'];
+                        startGame(modes[vrSelectedModeIdx]);
+                    }
                 }
             } else if (gameState === 'crashing') {
                 // Reinicio desde choque
