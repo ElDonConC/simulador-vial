@@ -152,11 +152,19 @@
     <!-- Capa de Interfaz y Menús -->
     <div id="ui-layer" class="flex flex-col items-center justify-center">
 
-        <!-- Selector de Cámara Flotante (Durante el juego) -->
-        <div id="cam-toggle" class="hidden pointer-events-auto absolute top-5 right-5 z-40 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-slate-300 shadow-lg cursor-pointer hover:bg-slate-800 transition" onclick="toggleCameraView()">
-            <span id="cam-icon">👁️</span>
-            <span id="cam-label">Cámara: 1ra Persona</span>
-            <span class="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-400">Tecla C</span>
+        <!-- Controles Flotantes Superiores -->
+        <div class="absolute top-5 right-5 z-40 flex items-center gap-3">
+            <button id="vr-btn" class="pointer-events-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg border border-purple-400/40 backdrop-blur-md flex items-center gap-2 transition active:scale-95 cursor-pointer" onclick="toggleVRMode()">
+                <span class="text-base">🥽</span>
+                <span id="vr-btn-label">Modo VR (Meta Quest)</span>
+            </button>
+
+            <!-- Selector de Cámara Flotante (Durante el juego) -->
+            <div id="cam-toggle" class="hidden pointer-events-auto bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-slate-300 shadow-lg cursor-pointer hover:bg-slate-800 transition" onclick="toggleCameraView()">
+                <span id="cam-icon">👁️</span>
+                <span id="cam-label">Cámara: 1ra Persona</span>
+                <span class="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-400">Tecla C</span>
+            </div>
         </div>
 
         <!-- Menú Principal -->
@@ -383,7 +391,7 @@
         }
 
         // ============================================================
-        // THREE.JS SCENE SETUP
+        // THREE.JS SCENE & WEBXR SETUP (META QUEST VR)
         // ============================================================
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x060914, 0.014); // Niebla nocturna inmersiva
@@ -395,6 +403,62 @@
         renderer.setClearColor(0x060914);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Habilitar soporte WebXR para Meta Quest 2 / 3 / Pro
+        renderer.xr.enabled = true;
+        let isVRActive = false;
+        let vrSession = null;
+
+        // Soporte de mandos Quest (Controladores Touch)
+        const controller1 = renderer.xr.getController(0);
+        const controller2 = renderer.xr.getController(1);
+        scene.add(controller1);
+        scene.add(controller2);
+
+        // Detectar si el dispositivo soporta VR al cargar
+        if ('xr' in navigator) {
+            navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                const vrLabel = document.getElementById('vr-btn-label');
+                if (supported && vrLabel) {
+                    vrLabel.innerText = 'Entrar en VR (Meta Quest)';
+                }
+            }).catch(() => {});
+        }
+
+        async function toggleVRMode() {
+            if (!navigator.xr) {
+                alert("Tu navegador no soporta WebXR. Si estás en Meta Quest, abre esta página dentro del 'Meta Quest Browser'.");
+                return;
+            }
+
+            if (!isVRActive) {
+                try {
+                    const session = await navigator.xr.requestSession('immersive-vr', {
+                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                    });
+                    await renderer.xr.setSession(session);
+                    vrSession = session;
+                    isVRActive = true;
+                    document.getElementById('vr-btn-label').innerText = 'Salir de VR';
+                    
+                    // Iniciar automáticamente en modo FPV atento si estaba en menú
+                    if (gameState === 'menu') {
+                        startGame('normal');
+                    }
+
+                    session.addEventListener('end', () => {
+                        isVRActive = false;
+                        vrSession = null;
+                        document.getElementById('vr-btn-label').innerText = 'Modo VR (Meta Quest)';
+                    });
+                } catch (err) {
+                    console.error("No se pudo iniciar la sesión VR:", err);
+                    alert("Asegúrate de estar en las Meta Quest o activar WebXR en tu navegador.");
+                }
+            } else if (vrSession) {
+                vrSession.end();
+            }
+        }
 
         // Iluminación global
         const ambientLight = new THREE.AmbientLight(0x334155, 0.6);
@@ -1056,8 +1120,34 @@
                 });
 
                 // ACTUALIZAR CÁMARA (1ra Persona / 3ra Persona) SIGUIENDO AL AUTO
-                if (cameraMode === 'fpv') {
-                    // Ojos del conductor sentados a la izquierda de la cabina
+                if (renderer.xr.isPresenting) {
+                    // En Realidad Virtual (VR): La posición del cuerpo del jugador se ajusta a la cabina,
+                    // y el headset de Meta Quest se encarga de la rotación 6DOF y la vista estéreo en 360°.
+                    const baseReferenceSpace = renderer.xr.getReferenceSpace();
+                    camera.position.set(player.position.x - 0.5, 1.45, player.position.z + 0.3);
+
+                    // Leer mandos Meta Quest Touch (Palancas y Gatillos)
+                    const session = renderer.xr.getSession();
+                    if (session && session.inputSources) {
+                        for (const source of session.inputSources) {
+                            if (source.gamepad) {
+                                const gp = source.gamepad;
+                                // Palanca analógica (Thumbstick X) para girar el auto
+                                if (gp.axes && gp.axes.length >= 4) {
+                                    const stickX = gp.axes[2]; // Eje X del joystick
+                                    if (Math.abs(stickX) > 0.15) {
+                                        targetX += stickX * 0.18;
+                                    }
+                                }
+                                // Gatillo principal (Trigger / Grip) para frenar
+                                if (gp.buttons && gp.buttons[0] && gp.buttons[0].pressed) {
+                                    isBraking = true;
+                                }
+                            }
+                        }
+                    }
+                } else if (cameraMode === 'fpv') {
+                    // Modo pantalla plana FPV (Ojos del conductor)
                     const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.05 : 0;
                     camera.position.set(player.position.x - 0.5 + headBob, 1.45, player.position.z + 0.3);
                     camera.rotation.set(
@@ -1066,7 +1156,7 @@
                         currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.06 : (targetX - player.position.x) * 0.03
                     );
                 } else {
-                    // Cámara 3ra persona detrás del auto
+                    // Modo pantalla plana 3ra persona detrás del auto
                     camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
                     camera.lookAt(player.position.x, 1.1, player.position.z - 15);
                 }
@@ -1129,11 +1219,13 @@
                     }
                 }
             } else if (gameState === 'crashing') {
-                // Cinemática violenta de impacto en primera persona
-                camera.position.z -= 0.5;
-                camera.position.y -= 0.04;
-                camera.rotation.x -= 0.08;
-                camera.rotation.z += (Math.random() - 0.5) * 0.25;
+                // Cinemática violenta de impacto
+                if (!renderer.xr.isPresenting) {
+                    camera.position.z -= 0.5;
+                    camera.position.y -= 0.04;
+                    camera.rotation.x -= 0.08;
+                    camera.rotation.z += (Math.random() - 0.5) * 0.25;
+                }
             }
 
             renderer.render(scene, camera);
@@ -1145,7 +1237,8 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        window.onload = () => animate();
+        // Loop de renderizado con soporte WebXR (Meta Quest) y navegador estándar
+        renderer.setAnimationLoop(animate);
     </script>
 </body>
 
