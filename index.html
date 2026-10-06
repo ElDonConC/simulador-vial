@@ -611,14 +611,17 @@
         player.add(headlightR);
         player.add(headlightR.target);
 
-        // Posiciones de cámara
+        // Montar la cámara DENTRO del grupo del jugador para que se mueva exactamente con él
+        player.add(camera);
+
+        // Posiciones de cámara relativas al auto
         function updateCameraPosition() {
             if (cameraMode === 'fpv') {
                 camera.position.set(-0.6, 1.25, -0.05); // Ojos del conductor
                 camera.rotation.set(0, 0, 0);
             } else {
-                camera.position.set(0, 3.2, 5.5); // Vista trasera tipo persecución
-                camera.lookAt(player.position.x, 1, player.position.z - 15);
+                camera.position.set(0, 3.2, 5.5); // Vista 3ra persona detrás del auto
+                camera.rotation.set(-0.15, 0, 0);
             }
         }
         updateCameraPosition();
@@ -955,16 +958,16 @@
                     // Balanceo involuntario
                     player.position.x += Math.sin(Date.now() * 0.002) * 0.08;
 
-                    // Desorientación en cámara
+                    // Desorientación en cámara (cabeceo de conductor)
                     if (cameraMode === 'fpv') {
-                        camera.rotation.z = Math.sin(Date.now() * 0.0015) * 0.08;
-                        camera.position.x = -0.6 + Math.sin(Date.now() * 0.002) * 0.12;
+                        camera.rotation.z = Math.sin(Date.now() * 0.0015) * 0.06;
+                        camera.position.x = -0.6 + Math.sin(Date.now() * 0.002) * 0.08;
                     }
                 } else {
                     // Respuesta ágil
                     player.position.x += (targetX - player.position.x) * 0.14;
                     if (cameraMode === 'fpv') {
-                        camera.rotation.z = (player.position.x - targetX) * 0.03;
+                        camera.rotation.z = (targetX - player.position.x) * 0.04; // inclinación de la mirada al girar
                         camera.position.x = -0.6;
                     }
                 }
