@@ -203,12 +203,14 @@
                 </button>
             </div>
 
-            <div class="mt-8 text-xs text-slate-500 flex justify-center items-center gap-4">
-                <span>⌨️ <b>Flechas ← →</b> o <b>A / D</b></span>
+            <div class="mt-8 text-xs text-slate-500 flex flex-wrap justify-center items-center gap-3 sm:gap-4">
+                <span>⌨️ <b>← → / A D</b> (Dirección)</span>
                 <span>•</span>
-                <span>📱 <b>Toca los costados</b></span>
+                <span>🛑 <b>ESPACIO</b> (Freno de mano)</span>
                 <span>•</span>
-                <span>🎥 <b>C (Cambiar Vista)</b></span>
+                <span>📉 <b>↓ / S</b> (Desacelerar)</span>
+                <span>•</span>
+                <span>🎥 <b>C</b> (Vista)</span>
             </div>
         </div>
 
@@ -221,6 +223,9 @@
                 <div class="flex items-center gap-2">
                     <span id="hud-status-dot" class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
                     <span id="hud-status" class="font-bold text-blue-400 text-base sm:text-lg uppercase tracking-wider">Óptimo</span>
+                </div>
+                <div id="hud-brake-indicator" class="hidden text-[10px] font-black tracking-widest text-red-400 bg-red-950/80 border border-red-500/50 px-2 py-0.5 rounded animate-pulse w-fit">
+                    FRENANDO
                 </div>
             </div>
 
@@ -777,16 +782,29 @@
         let targetX = 0;
         let isLeftDown = false;
         let isRightDown = false;
+        let isBraking = false; // Barra Espaciadora (Frenado fuerte)
+        let isDownDown = false;  // Flecha Abajo o S (Desaceleración continua)
         let distractionInterval;
         let isDistractionActive = false;
+        const elBrakeIndicator = document.getElementById('hud-brake-indicator');
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftDown = true;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightDown = true;
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') isDownDown = true;
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                isBraking = true;
+            }
         });
         window.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftDown = false;
             if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightDown = false;
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') isDownDown = false;
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
+                isBraking = false;
+            }
         });
 
         // Controles táctiles
@@ -952,18 +970,40 @@
             requestAnimationFrame(animate);
 
             if (gameState === 'playing') {
-                speedMultiplier += 0.00015;
-                speedMultiplier = Math.min(speedMultiplier, 1.4);
+                // DINÁMICA DE VELOCIDAD, FRENADO Y DESACELERACIÓN
+                if (isBraking) {
+                    // Frenado fuerte con BARRA ESPACIADORA
+                    speedMultiplier = Math.max(0.15, speedMultiplier - 0.015);
+                    tailMat.emissiveIntensity = 6.0; // Luces de freno intensas
+                    tailMat.color.setHex(0xff2222);
+                    if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
+
+                    // Audio de frenada
+                    if (skidSynth && Math.random() > 0.85) {
+                        skidSynth.triggerAttackRelease("16n", undefined, 0.3);
+                    }
+                } else if (isDownDown) {
+                    // Desaceleración continua y progresiva con Flecha Abajo o S
+                    speedMultiplier = Math.max(0.2, speedMultiplier - 0.005);
+                    tailMat.emissiveIntensity = 4.5;
+                    if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
+                } else {
+                    // Aceleración natural de crucero en carretera
+                    speedMultiplier += 0.00015;
+                    speedMultiplier = Math.min(speedMultiplier, 1.4);
+                    tailMat.emissiveIntensity = 2.0;
+                    if (elBrakeIndicator) elBrakeIndicator.classList.add('hidden');
+                }
 
                 score += speedMultiplier * 0.012;
                 elScore.innerText = score.toFixed(1) + " km";
 
-                let displaySpeed = 60 + Math.floor(speedMultiplier * 55);
-                elSpeed.innerText = displaySpeed;
-                elRpmBar.style.width = `${((speedMultiplier - 0.6) / 0.8) * 100}%`;
+                let displaySpeed = Math.floor(speedMultiplier * 90);
+                elSpeed.innerText = Math.max(15, displaySpeed);
+                elRpmBar.style.width = `${((speedMultiplier - 0.15) / 1.25) * 100}%`;
 
                 if (engineFilter) {
-                    engineFilter.frequency.value = 220 + (speedMultiplier * 900);
+                    engineFilter.frequency.value = 180 + (speedMultiplier * 950);
                 }
 
                 // Control de dirección
