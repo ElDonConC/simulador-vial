@@ -243,9 +243,42 @@
         </div>
     </div>
 
-    <!-- Zonas de control táctil para móviles -->
-    <div id="touch-left" class="hidden"></div>
-    <div id="touch-right" class="hidden"></div>
+    <!-- Controles táctiles visuales en pantalla para Celulares y Tablets -->
+    <div id="mobile-controls" class="hidden pointer-events-none fixed inset-0 z-30 flex flex-col justify-between p-4 sm:p-6 select-none">
+        
+        <!-- Indicador de ayuda táctil superior -->
+        <div class="flex justify-center">
+            <div class="bg-slate-950/70 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700/50 text-[10px] text-slate-400 font-semibold">
+                📱 Toca los botones inferiores o la pantalla para maniobrar
+            </div>
+        </div>
+
+        <!-- Botones de Acción Táctil Inferiores -->
+        <div class="flex justify-between items-end pb-28 sm:pb-32 gap-3 pointer-events-auto">
+            
+            <!-- Grupo Izquierdo: Volante Virtual -->
+            <div class="flex gap-2.5">
+                <button id="btn-left" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900/80 active:bg-blue-600/90 border-2 border-slate-600 active:border-blue-400 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-2xl backdrop-blur-md text-white transition-all transform active:scale-90">
+                    ◀
+                </button>
+                <button id="btn-right" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900/80 active:bg-blue-600/90 border-2 border-slate-600 active:border-blue-400 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-2xl backdrop-blur-md text-white transition-all transform active:scale-90">
+                    ▶
+                </button>
+            </div>
+
+            <!-- Grupo Derecho: Freno de Emergencia y Desacelerar -->
+            <div class="flex gap-2.5">
+                <button id="btn-down" class="w-16 h-16 sm:w-20 sm:h-20 bg-slate-900/80 active:bg-amber-600/90 border-2 border-slate-600 active:border-amber-400 rounded-2xl flex flex-col items-center justify-center text-xl sm:text-2xl shadow-2xl backdrop-blur-md text-white transition-all transform active:scale-90">
+                    <span>▼</span>
+                    <span class="text-[9px] font-bold text-slate-300 uppercase">Frenar</span>
+                </button>
+                <button id="btn-brake" class="w-16 h-16 sm:w-20 sm:h-20 bg-red-950/80 active:bg-red-600 border-2 border-red-500/70 active:border-red-300 rounded-2xl flex flex-col items-center justify-center text-xl sm:text-2xl shadow-2xl backdrop-blur-md text-white transition-all transform active:scale-90">
+                    <span>🛑</span>
+                    <span class="text-[9px] font-black text-red-300 uppercase">STOP</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Módulos JavaScript -->
     <script src="js/audio.js"></script>

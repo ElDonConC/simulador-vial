@@ -143,11 +143,27 @@ window.addEventListener('keyup', (e) => {
     }
 });
 
-// Controles táctiles
-tLeft.addEventListener('touchstart', (e) => { e.preventDefault(); isLeftDown = true; });
-tLeft.addEventListener('touchend', (e) => { e.preventDefault(); isLeftDown = false; });
-tRight.addEventListener('touchstart', (e) => { e.preventDefault(); isRightDown = true; });
-tRight.addEventListener('touchend', (e) => { e.preventDefault(); isRightDown = false; });
+// Referencias a Controles Móviles
+const elMobileControls = document.getElementById('mobile-controls');
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnDown = document.getElementById('btn-down');
+const btnBrake = document.getElementById('btn-brake');
+
+// Vincular botones móviles con touchstart/touchend y mousedown/mouseup
+function bindTouchButton(btn, onStart, onEnd) {
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); onStart(); }, { passive: false });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); onEnd(); }, { passive: false });
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); onStart(); });
+    btn.addEventListener('mouseup', (e) => { e.preventDefault(); onEnd(); });
+    btn.addEventListener('mouseleave', (e) => { onEnd(); });
+}
+
+bindTouchButton(btnLeft, () => { isLeftDown = true; }, () => { isLeftDown = false; });
+bindTouchButton(btnRight, () => { isRightDown = true; }, () => { isRightDown = false; });
+bindTouchButton(btnDown, () => { isDownDown = true; }, () => { isDownDown = false; });
+bindTouchButton(btnBrake, () => { isBraking = true; }, () => { isBraking = false; });
 
 function toggleCameraView() {
     cameraMode = (cameraMode === 'fpv') ? 'tpv' : 'fpv';
@@ -240,8 +256,7 @@ function startGame(mode) {
     elHud.classList.remove('opacity-0');
     elCamToggle.classList.remove('hidden');
 
-    tLeft.classList.remove('hidden');
-    tRight.classList.remove('hidden');
+    if (elMobileControls) elMobileControls.classList.remove('hidden');
 
     elCanvas.className = '';
     clearInterval(distractionInterval);
@@ -301,6 +316,7 @@ function triggerGameOver(obstacleType) {
     gameState = 'crashing';
     clearInterval(distractionInterval);
     elDistraction.classList.add('hidden');
+    if (elMobileControls) elMobileControls.classList.add('hidden');
     elHud.classList.add('opacity-0');
     elCamToggle.classList.add('hidden');
 
@@ -352,6 +368,7 @@ function triggerGameOver(obstacleType) {
 
 function resetGame() {
     gameState = 'menu';
+    if (elMobileControls) elMobileControls.classList.add('hidden');
     elGameOver.classList.add('menu-hidden');
     elGameOver.classList.add('hidden');
     elMainMenu.classList.remove('menu-hidden');
