@@ -24,6 +24,7 @@ const elCanvas = document.getElementById('game-canvas');
 const elDistraction = document.getElementById('phone-distraction');
 const elCamToggle = document.getElementById('cam-toggle');
 const elCamLabel = document.getElementById('cam-label');
+const elBtnBackMenu = document.getElementById('btn-back-menu');
 const elBrakeIndicator = document.getElementById('hud-brake-indicator');
 const tLeft = document.getElementById('touch-left');
 const tRight = document.getElementById('touch-right');
@@ -311,8 +312,10 @@ function startGame(mode) {
     elMainMenu.classList.remove('menu-visible');
     elGameOver.classList.add('menu-hidden');
     elGameOver.classList.remove('menu-visible');
+    elGameOver.classList.add('hidden');
     elHud.classList.remove('opacity-0');
     elCamToggle.classList.remove('hidden');
+    if (elBtnBackMenu) elBtnBackMenu.classList.remove('hidden');
 
     if (vrMenuPanel) vrMenuPanel.visible = false;
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
@@ -322,10 +325,6 @@ function startGame(mode) {
     clearInterval(distractionInterval);
     elDistraction.classList.add('hidden');
     isDistractionActive = false;
-
-    if (engineNoise) {
-        engineNoise.volume.rampTo(-12, 1);
-    }
 
     if (mode === 'normal') {
         elStatus.innerText = '100% Lúcido';
@@ -340,7 +339,6 @@ function startGame(mode) {
         elCanvas.classList.add('drunk-effect');
         scene.fog.color.setHex(0x2e1065);
         renderer.setClearColor(0x2e1065);
-        if (engineFilter) engineFilter.frequency.value = 160;
     } else if (mode === 'distracted') {
         elStatus.innerText = 'Distraído (Celular)';
         elStatus.className = 'font-bold text-amber-400 text-base sm:text-lg uppercase tracking-wider';
@@ -379,10 +377,14 @@ function triggerGameOver(obstacleType) {
     if (elMobileControls) elMobileControls.classList.add('hidden');
     elHud.classList.add('opacity-0');
     elCamToggle.classList.add('hidden');
+    if (elBtnBackMenu) elBtnBackMenu.classList.add('hidden');
 
-    if (engineNoise) engineNoise.volume.rampTo(-Infinity, 0.1);
+    stopEngineAudio();
     if (skidSynth) skidSynth.triggerAttackRelease("4n");
-    setTimeout(() => { if (crashSynth) crashSynth.triggerAttackRelease("1n"); }, 180);
+    setTimeout(() => { 
+        if (crashSynth) crashSynth.triggerAttackRelease("1n"); 
+        if (crashSub) crashSub.triggerAttackRelease("C1", "2n");
+    }, 120);
 
     let currentKmh = Math.floor(speedMultiplier * 90);
     let reactionSeconds = currentMode === 'drunk' ? "2.6s (Retardo)" : (currentMode === 'distracted' ? "3.2s (Ceguera)" : "0.9s (Alerta)");
@@ -437,13 +439,22 @@ function resetGame() {
     gameState = 'menu';
     isBraking = false;
     isDownDown = false;
+    clearInterval(distractionInterval);
+    elDistraction.classList.add('hidden');
+    stopEngineAudio();
+
     if (elMobileControls) elMobileControls.classList.add('hidden');
+    if (elBtnBackMenu) elBtnBackMenu.classList.add('hidden');
+    if (elCamToggle) elCamToggle.classList.add('hidden');
+    if (elHud) elHud.classList.add('opacity-0');
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
+    
     elGameOver.classList.add('menu-hidden');
     elGameOver.classList.add('hidden');
     elMainMenu.classList.remove('menu-hidden');
     elMainMenu.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
     elMainMenu.classList.add('menu-visible');
+    
     player.position.set(0, 0, 0);
     player.rotation.set(0, 0, 0);
     
@@ -465,11 +476,12 @@ function animate() {
     if (renderer.xr.isPresenting) {
         const session = renderer.xr.getSession();
         if (session && session.inputSources) {
-            let anyButtonPressed = false;
             let stickXInput = 0;
             let stickYInput = 0;
             let gripPressed = false;
             let triggerPressed = false;
+            let buttonPrimary = false;   // A o X
+            let buttonSecondary = false; // B o Y (Menú)
 
             for (const source of session.inputSources) {
                 if (source.gamepad) {
@@ -480,9 +492,10 @@ function animate() {
                         if (gp.buttons[0] && gp.buttons[0].pressed) triggerPressed = true;
                         // Botón Grip (índice 1 - botón de agarrar lateral)
                         if (gp.buttons[1] && gp.buttons[1].pressed) gripPressed = true;
-                        // Botones A/B o X/Y
-                        if (gp.buttons[4] && gp.buttons[4].pressed) anyButtonPressed = true;
-                        if (gp.buttons[5] && gp.buttons[5].pressed) anyButtonPressed = true;
+                        // Botones A/X (índice 4)
+                        if (gp.buttons[4] && gp.buttons[4].pressed) buttonPrimary = true;
+                        // Botones B/Y o Menú (índice 5)
+                        if (gp.buttons[5] && gp.buttons[5].pressed) buttonSecondary = true;
                     }
                     // Detectar joystick
                     if (gp.axes && gp.axes.length >= 2) {
@@ -509,14 +522,14 @@ function animate() {
                     }
                 }
 
-                // Iniciar juego con Gatillo o Botón A
-                if (triggerPressed || anyButtonPressed) {
+                // Iniciar juego con Gatillo o Botón A/X
+                if (triggerPressed || buttonPrimary) {
                     const modes = ['normal', 'drunk', 'distracted'];
                     startGame(modes[vrSelectedModeIdx]);
                 }
             } else if (gameState === 'crashing') {
                 // Reinicio desde choque
-                if (triggerPressed || anyButtonPressed || gripPressed) {
+                if (triggerPressed || buttonPrimary || gripPressed || buttonSecondary) {
                     resetGame();
                 }
             } else if (gameState === 'playing') {
@@ -524,8 +537,13 @@ function animate() {
                 if (Math.abs(stickXInput) > 0.1) {
                     targetX += stickXInput * 0.22;
                 }
-                // Freno solo si se pulsa Grip (botón lateral) o Botón A/X
-                isBraking = gripPressed || anyButtonPressed;
+                // Freno al mantener Grip o Botón A/X
+                isBraking = gripPressed || buttonPrimary;
+
+                // Botón B / Y en mandos VR para volver al menú en cualquier momento
+                if (buttonSecondary) {
+                    resetGame();
+                }
             }
         }
     }
@@ -536,8 +554,8 @@ function animate() {
             // Frenado fuerte al mantener pulsado el botón de freno
             speedMultiplier = Math.max(0.1, speedMultiplier - 0.025);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
-            if (skidSynth && Math.random() > 0.85) {
-                skidSynth.triggerAttackRelease("16n", undefined, 0.3);
+            if (skidSynth && Math.random() > 0.82) {
+                skidSynth.triggerAttackRelease("16n", undefined, 0.4);
             }
         } else if (isDownDown) {
             speedMultiplier = Math.max(0.2, speedMultiplier - 0.008);
@@ -553,16 +571,15 @@ function animate() {
             if (elBrakeIndicator) elBrakeIndicator.classList.add('hidden');
         }
 
+        // Actualizar motor de audio realista
+        updateEngineAudio(speedMultiplier, isBraking);
+
         score += speedMultiplier * 0.012;
         elScore.innerText = score.toFixed(1) + " km";
 
         let displaySpeed = Math.floor(speedMultiplier * 90);
         elSpeed.innerText = Math.max(15, displaySpeed);
         elRpmBar.style.width = `${((speedMultiplier - 0.15) / 1.25) * 100}%`;
-
-        if (engineFilter) {
-            engineFilter.frequency.value = 180 + (speedMultiplier * 950);
-        }
 
         // Control lateral
         if (isLeftDown) targetX -= 0.19;
