@@ -380,7 +380,6 @@ function triggerGameOver(obstacleType) {
     if (elBtnBackMenu) elBtnBackMenu.classList.add('hidden');
 
     stopEngineAudio();
-    if (skidSynth) skidSynth.triggerAttackRelease("4n");
     setTimeout(() => { 
         if (crashSynth) crashSynth.triggerAttackRelease("1n"); 
         if (crashSub) crashSub.triggerAttackRelease("C1", "2n");
@@ -554,9 +553,6 @@ function animate() {
             // Frenado fuerte al mantener pulsado el botón de freno
             speedMultiplier = Math.max(0.1, speedMultiplier - 0.025);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
-            if (skidSynth && Math.random() > 0.82) {
-                skidSynth.triggerAttackRelease("16n", undefined, 0.4);
-            }
         } else if (isDownDown) {
             speedMultiplier = Math.max(0.2, speedMultiplier - 0.008);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');

@@ -3,7 +3,8 @@
 // ============================================================
 let audioInitialized = false;
 let engineOsc1, engineOsc2, engineNoise, engineFilter, engineGain;
-let skidSynth, crashSynth, crashSub, notificationSynth, hornSynth;
+let skidGain, skidFilter, skidFMOsc, skidNoise;
+let crashSynth, crashSub, notificationSynth, hornSynth;
 
 function initAudio() {
     if (audioInitialized) return;
@@ -41,14 +42,30 @@ function initAudio() {
                 engineNoise.connect(noiseFilter);
                 engineNoise.volume.value = -18;
 
-                // 2. CHIRRIDO DE FRENADO / DERRAPES AGUDO Y REALISTA
-                skidSynth = new Tone.NoiseSynth({
-                    noise: { type: "pink" },
-                    envelope: { attack: 0.05, decay: 0.35, sustain: 0.1, release: 0.25 }
-                });
-                const skidFilter = new Tone.Filter(3200, "bandpass").connect(masterGain);
-                skidSynth.connect(skidFilter);
-                skidSynth.volume.value = 4;
+                // 2. CHIRRIDO DE FRENADO / DERRAPES SUAVE Y REALISTA
+                // Usamos síntesis continua de fricción de neumático con modulación de frecuencia y ruido asfáltico
+                skidGain = new Tone.Gain(0.0).connect(masterGain);
+                
+                skidFilter = new Tone.Filter({
+                    frequency: 2200,
+                    type: "bandpass",
+                    Q: 3.5
+                }).connect(skidGain);
+
+                // Tono chillón del caucho contra el asfalto (Fricción elástica)
+                skidFMOsc = new Tone.FMOscillator({
+                    frequency: 850,
+                    type: "sawtooth",
+                    modulationType: "triangle",
+                    harmonicity: 1.41,
+                    modulationIndex: 8
+                }).connect(skidFilter).start();
+
+                // Ruido de textura de asfalto y goma quemada
+                skidNoise = new Tone.Noise("pink").start();
+                const skidNoiseFilter = new Tone.Filter(1800, "bandpass").connect(skidGain);
+                skidNoise.connect(skidNoiseFilter);
+                skidNoise.volume.value = -14;
 
                 // 3. IMPACTO DE CHOQUE Y DESTRUCCIÓN METÁLICA
                 crashSynth = new Tone.NoiseSynth({
@@ -80,20 +97,36 @@ function initAudio() {
     }
 }
 
-// Función auxiliar para modular el motor en cada frame de física
+// Función auxiliar para modular el motor y frenos en cada frame de física
 function updateEngineAudio(speedMult, isBraking) {
     if (!audioInitialized || !engineGain) return;
 
-    // Volumen suave según el estado
+    // Volumen suave del motor
     engineGain.gain.rampTo(0.35, 0.1);
 
+    // Si está frenando fuerte, modular el sonido de derrape de neumáticos continuo
+    if (skidGain && skidFMOsc && skidFilter) {
+        if (isBraking && speedMult > 0.25) {
+            // Ganancia proporcional a la velocidad a la que se frena
+            const skidVol = Math.min(0.45, (speedMult - 0.2) * 0.5);
+            skidGain.gain.rampTo(skidVol, 0.08);
+
+            // Modulación del tono según velocidad de derrape (chillido realista)
+            const skidPitch = 700 + (speedMult * 400);
+            skidFMOsc.frequency.rampTo(skidPitch, 0.08);
+            skidFilter.frequency.rampTo(skidPitch * 2.2, 0.08);
+        } else {
+            // Silenciar derrape suavemente cuando se suelta el freno
+            skidGain.gain.rampTo(0.0, 0.12);
+        }
+    }
+
     // RPM Frecuencia base proporcional a la velocidad
-    // Rango de 40Hz (ralentí) hasta 240Hz (alta aceleración)
     const targetFreq = 42 + (speedMult * 145);
     if (engineOsc1) engineOsc1.frequency.rampTo(targetFreq, 0.06);
     if (engineOsc2) engineOsc2.frequency.rampTo(targetFreq * 0.5, 0.06);
 
-    // Abrir el filtro de paso bajo con aceleración (da brillo y rugido al acelerar)
+    // Abrir el filtro de paso bajo con aceleración (rugido suave)
     if (engineFilter) {
         const filterFreq = 160 + (speedMult * 1200);
         engineFilter.frequency.rampTo(filterFreq, 0.08);
@@ -108,5 +141,8 @@ function updateEngineAudio(speedMult, isBraking) {
 function stopEngineAudio() {
     if (engineGain) {
         engineGain.gain.rampTo(0, 0.15);
+    }
+    if (skidGain) {
+        skidGain.gain.rampTo(0, 0.08);
     }
 }
