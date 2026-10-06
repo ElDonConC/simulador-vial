@@ -739,27 +739,29 @@ function animate() {
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
             if (cameraMode === 'fpv') {
-                // Vista dentro del auto (Asiento del piloto con tablero, volante y capó visibles)
-                xrCameraRig.position.set(player.position.x - 0.5, 1.35, player.position.z + 0.1);
+                // Vista dentro del auto (Sentado exactamente en el asiento del piloto a la altura de los ojos)
+                xrCameraRig.position.set(player.position.x - 0.48, 1.28, player.position.z + 0.15);
                 if (cabin) cabin.visible = false;
                 if (roof) roof.visible = false;
             } else {
-                // Vista fuera del auto (Tercera persona persiguiendo al vehículo)
+                // Vista fuera del auto (Tercera persona aérea persiguiendo al vehículo)
                 xrCameraRig.position.set(player.position.x * 0.8, 3.2, player.position.z + 5.8);
                 if (cabin) cabin.visible = true;
                 if (roof) roof.visible = true;
             }
         } else if (cameraMode === 'fpv') {
+            // Modo Primera Persona en pantalla (PC / Celular)
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
-            const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.05 : 0;
-            camera.position.set(player.position.x - 0.5 + headBob, 1.45, player.position.z - 0.2);
+            const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
+            camera.position.set(player.position.x - 0.48 + headBob, 1.28, player.position.z + 0.15);
             camera.rotation.set(
-                -0.02,
+                -0.03, // Leve inclinación hacia abajo para ver el volante, velocímetro y la pista al frente
                 (targetX - player.position.x) * 0.04,
-                currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.06 : (targetX - player.position.x) * 0.03
+                currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : (targetX - player.position.x) * 0.03
             );
         } else {
+            // Modo Tercera Persona en pantalla
             if (cabin) cabin.visible = true;
             if (roof) roof.visible = true;
             camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
