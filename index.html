@@ -154,9 +154,9 @@
 
         <!-- Controles Flotantes Superiores -->
         <div class="absolute top-5 right-5 z-40 flex items-center gap-3">
-            <button id="vr-btn" class="pointer-events-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg border border-purple-400/40 backdrop-blur-md flex items-center gap-2 transition active:scale-95 cursor-pointer" onclick="toggleVRMode()">
+            <button id="vr-btn" class="pointer-events-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg border border-purple-400/40 backdrop-blur-md flex items-center gap-2 transition active:scale-95 cursor-pointer" onclick="handleVRButtonClick()">
                 <span class="text-base">🥽</span>
-                <span id="vr-btn-label">Modo VR (Meta Quest)</span>
+                <span id="vr-btn-label">Ver en Meta Quest (VR)</span>
             </button>
 
             <!-- Selector de Cámara Flotante (Durante el juego) -->
@@ -164,6 +164,51 @@
                 <span id="cam-icon">👁️</span>
                 <span id="cam-label">Cámara: 1ra Persona</span>
                 <span class="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-400">Tecla C</span>
+            </div>
+        </div>
+
+        <!-- Modal para abrir fácilmente en Meta Quest desde PC / Celular -->
+        <div id="quest-modal" class="hidden pointer-events-auto fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-purple-500/40 p-6 sm:p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative animate-fade-in">
+                <button onclick="toggleQuestModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold bg-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center">✕</button>
+                
+                <div class="w-12 h-12 bg-purple-500/20 border border-purple-500/40 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                    🥽
+                </div>
+                
+                <h3 class="text-2xl font-black text-white mb-2">Jugar en Meta Quest 3</h3>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6 leading-relaxed">
+                    Para vivir la experiencia inmersiva en Realidad Virtual:
+                </p>
+
+                <div class="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 text-left text-xs sm:text-sm space-y-3 text-slate-300 mb-6">
+                    <div class="flex items-start gap-2.5">
+                        <span class="bg-purple-600 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">1</span>
+                        <span>Ponte tus <b>Meta Quest</b> y abre la app <b>Meta Quest Browser</b>.</span>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <span class="bg-purple-600 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">2</span>
+                        <span>Escribe el link o escanea este código desde la app de Meta en tu celular:</span>
+                    </div>
+                </div>
+
+                <!-- Código QR generado dinámicamente -->
+                <div class="bg-white p-3 rounded-2xl w-44 h-44 mx-auto mb-4 flex items-center justify-center shadow-lg">
+                    <img id="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://eldonconc.github.io/simulador-vial/" alt="QR Meta Quest" class="w-full h-full rounded-xl" />
+                </div>
+
+                <div class="text-[11px] font-mono text-purple-300 bg-purple-950/50 py-1.5 px-3 rounded-lg border border-purple-800/40 inline-block mb-4">
+                    https://eldonconc.github.io/simulador-vial/
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="navigator.clipboard.writeText('https://eldonconc.github.io/simulador-vial/'); alert('¡Enlace copiado al portapapeles!');" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                        📋 Copiar Enlace
+                    </button>
+                    <button onclick="toggleQuestModal(false)" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                        Entendido
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -415,19 +460,41 @@
         scene.add(controller1);
         scene.add(controller2);
 
-        // Detectar si el dispositivo soporta VR al cargar
+        // Modal de Guía / QR para Meta Quest
+        const elQuestModal = document.getElementById('quest-modal');
+        function toggleQuestModal(show) {
+            if (show) {
+                elQuestModal.classList.remove('hidden');
+            } else {
+                elQuestModal.classList.add('hidden');
+            }
+        }
+
+        // Detectar si el dispositivo actual soporta VR directamente
+        let hasVRSupport = false;
         if ('xr' in navigator) {
             navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                hasVRSupport = supported;
                 const vrLabel = document.getElementById('vr-btn-label');
                 if (supported && vrLabel) {
-                    vrLabel.innerText = 'Entrar en VR (Meta Quest)';
+                    vrLabel.innerText = '🥽 Entrar en VR (Meta Quest)';
                 }
             }).catch(() => {});
         }
 
+        async function handleVRButtonClick() {
+            if (hasVRSupport) {
+                // Si el usuario ya está dentro del Meta Quest Browser, inicia VR directo
+                toggleVRMode();
+            } else {
+                // Si está en PC / Mac / Celular, muestra el código QR y la guía
+                toggleQuestModal(true);
+            }
+        }
+
         async function toggleVRMode() {
             if (!navigator.xr) {
-                alert("Tu navegador no soporta WebXR. Si estás en Meta Quest, abre esta página dentro del 'Meta Quest Browser'.");
+                toggleQuestModal(true);
                 return;
             }
 
@@ -449,11 +516,11 @@
                     session.addEventListener('end', () => {
                         isVRActive = false;
                         vrSession = null;
-                        document.getElementById('vr-btn-label').innerText = 'Modo VR (Meta Quest)';
+                        document.getElementById('vr-btn-label').innerText = '🥽 Entrar en VR (Meta Quest)';
                     });
                 } catch (err) {
                     console.error("No se pudo iniciar la sesión VR:", err);
-                    alert("Asegúrate de estar en las Meta Quest o activar WebXR en tu navegador.");
+                    toggleQuestModal(true);
                 }
             } else if (vrSession) {
                 vrSession.end();
