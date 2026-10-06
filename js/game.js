@@ -99,11 +99,17 @@ vrMenuPanel.position.set(0, 1.25, -1.5);
 vrMenuPanel.visible = false;
 scene.add(vrMenuPanel);
 
-// Panel 3D Flotante de Game Over dentro de VR (anclado directamente al visor XR)
+// Panel 3D Flotante de Game Over dentro de VR (anclado directamente al visor XR, a la altura perfecta de los ojos)
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 0.05, -1.45);
+vrGameOverPanel.position.set(0, 0.40, -1.35); // Más arriba frente a los ojos
 vrGameOverPanel.visible = false;
 xrCameraRig.add(vrGameOverPanel);
+
+// Panel 3D Flotante de Smartphone / WhatsApp en VR
+const vrPhonePanel = createVRPhoneDistraction();
+vrPhonePanel.position.set(0.22, -0.05, -0.95); // Justo frente y a la derecha del volante en el campo visual
+vrPhonePanel.visible = false;
+xrCameraRig.add(vrPhonePanel);
 
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
@@ -395,6 +401,12 @@ function triggerDistraction() {
     isDistractionActive = true;
     elDistraction.classList.remove('hidden');
 
+    // Mostrar teléfono flotante en Realidad Virtual
+    if (renderer.xr.isPresenting && vrPhonePanel) {
+        vrPhonePanel.position.set(0.18, -0.05, -0.95);
+        vrPhonePanel.visible = true;
+    }
+
     if (notificationSynth) {
         notificationSynth.triggerAttackRelease(["E5", "B5"], [0.1, 0.1], undefined, 0.5);
         setTimeout(() => notificationSynth.triggerAttackRelease(["G5", "E5"], [0.1, 0.1]), 120);
@@ -406,12 +418,14 @@ function triggerDistraction() {
 function dismissDistraction() {
     isDistractionActive = false;
     elDistraction.classList.add('hidden');
+    if (vrPhonePanel) vrPhonePanel.visible = false;
 }
 
 function triggerGameOver(obstacleType) {
     gameState = 'crashing';
     clearInterval(distractionInterval);
     elDistraction.classList.add('hidden');
+    if (vrPhonePanel) vrPhonePanel.visible = false;
     if (elMobileControls) elMobileControls.classList.add('hidden');
     elHud.classList.add('opacity-0');
     elCamToggle.classList.add('hidden');
@@ -452,10 +466,10 @@ function triggerGameOver(obstacleType) {
             (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
     }
 
-    // Mostrar panel flotante 3D si estamos en Realidad Virtual (Frente a los ojos del jugador)
+    // Mostrar panel flotante 3D si estamos en Realidad Virtual (Elevado y centrado frente a los ojos del jugador)
     if (renderer.xr.isPresenting && vrGameOverPanel) {
         vrGameOverPanel.userData.update('¡IMPACTO FATAL!', obstacleType === 'pedestrian' ? 'Atropello a peatón en cruce' : 'Colisión frontal contra vehículo', `${currentKmh} KM/H • ${reactionSeconds.split(' ')[0]}`);
-        vrGameOverPanel.position.set(0, 0.05, -1.45);
+        vrGameOverPanel.position.set(0, 0.35, -1.35);
         vrGameOverPanel.rotation.set(0, 0, 0);
         vrGameOverPanel.visible = true;
     }
@@ -572,19 +586,21 @@ function animate() {
                             vrHitMarker.visible = true;
                             hitFound = true;
 
-                            // Mapear coordenada UV de impacto a las 5 opciones (de 1780px de altura)
+                            // Mapear coordenada UV de impacto a las 6 opciones (de 1920px de altura)
                             if (hit.uv) {
                                 const uvY = hit.uv.y; // 1.0 (arriba) a 0.0 (abajo)
-                                // Item 0: y 310-480 -> uv 0.73 a 0.82
-                                // Item 1: y 505-675 -> uv 0.62 a 0.71
-                                // Item 2: y 700-870 -> uv 0.51 a 0.60
-                                // Item 3: y 895-1065 -> uv 0.40 a 0.49
-                                // Item 4 (Salir): y 1090-1260 -> uv 0.29 a 0.38
-                                if (uvY >= 0.73 && uvY <= 0.84) rayPointedIdx = 0;
-                                else if (uvY >= 0.62 && uvY < 0.73) rayPointedIdx = 1;
-                                else if (uvY >= 0.51 && uvY < 0.62) rayPointedIdx = 2;
-                                else if (uvY >= 0.40 && uvY < 0.51) rayPointedIdx = 3;
-                                else if (uvY >= 0.28 && uvY < 0.40) rayPointedIdx = 4;
+                                // Item 0: y 275-430 -> uv 0.77 a 0.85
+                                // Item 1: y 450-605 -> uv 0.68 a 0.76
+                                // Item 2: y 625-780 -> uv 0.59 a 0.67
+                                // Item 3: y 800-955 -> uv 0.50 a 0.58
+                                // Item 4 (Cámara): y 975-1130 -> uv 0.41 a 0.49
+                                // Item 5 (Salir): y 1150-1305 -> uv 0.32 a 0.40
+                                if (uvY >= 0.77 && uvY <= 0.87) rayPointedIdx = 0;
+                                else if (uvY >= 0.68 && uvY < 0.77) rayPointedIdx = 1;
+                                else if (uvY >= 0.59 && uvY < 0.68) rayPointedIdx = 2;
+                                else if (uvY >= 0.50 && uvY < 0.59) rayPointedIdx = 3;
+                                else if (uvY >= 0.41 && uvY < 0.50) rayPointedIdx = 4;
+                                else if (uvY >= 0.31 && uvY < 0.41) rayPointedIdx = 5;
                             }
                             break;
                         }
@@ -600,9 +616,9 @@ function animate() {
                     vrSelectedModeIdx = rayPointedIdx;
                     vrMenuPanel.userData.render(vrSelectedModeIdx);
                 } else if (now - vrStickDebounce > 260) {
-                    // Navegación con palanca física (5 opciones: 0 a 4)
+                    // Navegación con palanca física (6 opciones: 0 a 5)
                     if (stickYInput > 0.3) {
-                        vrSelectedModeIdx = Math.min(4, vrSelectedModeIdx + 1);
+                        vrSelectedModeIdx = Math.min(5, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
                         vrStickDebounce = now;
                     } else if (stickYInput < -0.3) {
@@ -612,7 +628,7 @@ function animate() {
                     }
                 }
 
-                // Iniciar juego, alternar volumen o salir de VR con Gatillo o Botón A/X
+                // Iniciar juego, alternar volumen, cambiar cámara o salir de VR con Gatillo o Botón A/X
                 if (triggerPressed || buttonPrimary) {
                     if (vrSelectedModeIdx === 3) {
                         if (now - vrStickDebounce > 280) {
@@ -624,6 +640,13 @@ function animate() {
                             vrStickDebounce = now;
                         }
                     } else if (vrSelectedModeIdx === 4) {
+                        // Alternar vista interior (habitáculo) o exterior (3ra persona)
+                        if (now - vrStickDebounce > 280) {
+                            toggleCameraView();
+                            vrMenuPanel.userData.render(4);
+                            vrStickDebounce = now;
+                        }
+                    } else if (vrSelectedModeIdx === 5) {
                         // Salir de Realidad Virtual
                         if (vrSession) {
                             vrHitMarker.visible = false;
@@ -641,6 +664,11 @@ function animate() {
                     resetGame();
                 }
             } else if (gameState === 'playing') {
+                // Si la distracción de celular está activa y se pulsa el gatillo, cerrarla
+                if (isDistractionActive && (triggerPressed || buttonPrimary)) {
+                    dismissDistraction();
+                }
+
                 // Dirección suave con Joystick
                 if (Math.abs(stickXInput) > 0.1) {
                     targetX += stickXInput * 0.22;
@@ -710,10 +738,17 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            // Mover el Rig VR exactamente con el asiento del piloto
-            xrCameraRig.position.set(player.position.x - 0.5, 1.35, player.position.z + 0.1);
-            if (cabin) cabin.visible = false;
-            if (roof) roof.visible = false;
+            if (cameraMode === 'fpv') {
+                // Vista dentro del auto (Asiento del piloto con tablero, volante y capó visibles)
+                xrCameraRig.position.set(player.position.x - 0.5, 1.35, player.position.z + 0.1);
+                if (cabin) cabin.visible = false;
+                if (roof) roof.visible = false;
+            } else {
+                // Vista fuera del auto (Tercera persona persiguiendo al vehículo)
+                xrCameraRig.position.set(player.position.x * 0.8, 3.2, player.position.z + 5.8);
+                if (cabin) cabin.visible = true;
+                if (roof) roof.visible = true;
+            }
         } else if (cameraMode === 'fpv') {
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;

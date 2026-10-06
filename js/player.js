@@ -31,12 +31,26 @@ function createPlayerVehicle() {
     roof.position.set(0, 1.58, 0.25);
     player.add(roof);
 
-    // 4. Tablero y consola interior visible en FPV
+    // 4. Tablero, consola y detalles interiores visibles en FPV y VR
     const dashboard = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, 0.7), playerTrimMat);
     dashboard.position.set(0, 0.95, -0.4);
     player.add(dashboard);
 
-    // Pantalla de instrumentos
+    // Espejo retrovisor central
+    const mirrorGeo = new THREE.BoxGeometry(0.35, 0.12, 0.05);
+    const mirrorMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+    const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
+    mirror.position.set(0, 1.48, -0.4);
+    player.add(mirror);
+
+    // Asiento del copiloto
+    const seatGeo = new THREE.BoxGeometry(0.55, 0.65, 0.55);
+    const seatMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+    const passengerSeat = new THREE.Mesh(seatGeo, seatMat);
+    passengerSeat.position.set(0.5, 0.85, 0.15);
+    player.add(passengerSeat);
+
+    // Pantalla de instrumentos / Velocímetro digital
     const cluster = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.22), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
     cluster.position.set(-0.5, 1.1, -0.2);
     cluster.rotation.x = -Math.PI / 6;
