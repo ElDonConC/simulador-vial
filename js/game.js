@@ -396,14 +396,63 @@ function startGame(mode) {
     setTimeout(spawnObstacle, 2200);
 }
 
+const phoneNotifications = [
+    { sender: 'Mamá 👩', avatar: '👩', text: '¿A qué hora llegas? 😡 ¡Acuérdate que mañana tienes que levantarte temprano!', lines: ['¿A qué hora llegas? 😡', '¡Mañana tienes que levantarte temprano!', '¡Respóndeme por favor!'] },
+    { sender: 'Jefe / Trabajo 💼', avatar: '👨‍💼', text: 'URGENTE: Necesito el reporte final en mi correo ahora mismo.', lines: ['URGENTE ⚠️', 'Necesito el informe final en mi correo', '¿Puedes enviarlo ahora mismo?'] },
+    { sender: 'Grupo Amigos 🎉', avatar: '🍻', text: '¡Ya llegamos todos al carrete! ¿Dónde vienes? Apúrate que se acaba la previa.', lines: ['¡Ya llegamos todos al carrete! 🍻', '¿Dónde vienes? ¡Apúrate!', 'Se está acabando la previa 🎶'] },
+    { sender: 'Pareja ❤️', avatar: '🥰', text: 'Amor, ¿puedes pasar a comprar pan antes de venir? Te amo.', lines: ['Amor, ¿puedes pasar a comprar pan? 🍞', '¡Antes de que cierre el negocio!', 'Te amo ❤️'] },
+    { sender: 'Banco Alerta 💳', avatar: '🏦', text: 'Compra aprobada por $45.990 en tienda online. Si no reconoce esta compra...', lines: ['ALERTA DE SEGURIDAD 💳', 'Compra aprobada por $45.990 en línea', '¿Reconoce esta transacción?'] }
+];
+
 function triggerDistraction() {
     if (gameState !== 'playing') return;
     isDistractionActive = true;
+
+    // 1. Elegir notificación aleatoria
+    const notif = phoneNotifications[Math.floor(Math.random() * phoneNotifications.length)];
+    const elAvatar = document.getElementById('phone-avatar');
+    const elSender = document.getElementById('phone-sender');
+    const elBody = document.getElementById('phone-body');
+    const elBtnDismiss = document.getElementById('phone-btn-dismiss');
+
+    if (elAvatar) elAvatar.innerText = notif.avatar;
+    if (elSender) elSender.innerText = notif.sender;
+    if (elBody) elBody.innerText = notif.text;
+
+    // 2. Aleatorizar la posición de la ventana del celular en pantalla (para que nunca salga en el mismo lugar)
+    const positions = [
+        { top: '15%', left: '30%', transform: 'translate(-50%, 0)' },
+        { top: '22%', left: '50%', transform: 'translate(-50%, 0)' },
+        { top: '18%', left: '70%', transform: 'translate(-50%, 0)' },
+        { top: '35%', left: '35%', transform: 'translate(-50%, 0)' },
+        { top: '32%', left: '65%', transform: 'translate(-50%, 0)' }
+    ];
+    const pos = positions[Math.floor(Math.random() * positions.length)];
+    elDistraction.style.top = pos.top;
+    elDistraction.style.left = pos.left;
+    elDistraction.style.transform = pos.transform;
+
+    // 3. Aleatorizar la posición del botón de cerrar (izquierda, centro, derecha)
+    const btnAligns = ['flex justify-start', 'flex justify-center', 'flex justify-end'];
+    const selectedAlign = ['left', 'center', 'right'][Math.floor(Math.random() * 3)];
+    const elFooter = document.getElementById('phone-footer');
+    if (elFooter) {
+        elFooter.className = 'bg-slate-100 p-2.5 border-t border-slate-200 ' + btnAligns[Math.floor(Math.random() * btnAligns.length)];
+    }
+
     elDistraction.classList.remove('hidden');
 
-    // Mostrar teléfono flotante en Realidad Virtual
+    // 4. Mostrar teléfono flotante en Realidad Virtual en posiciones y orientaciones dinámicas
     if (renderer.xr.isPresenting && vrPhonePanel) {
-        vrPhonePanel.position.set(0.18, -0.05, -0.95);
+        const vrOffsets = [
+            { x: 0.22, y: -0.05, z: -0.95 },
+            { x: -0.22, y: -0.05, z: -0.95 },
+            { x: 0.0, y: 0.12, z: -0.90 },
+            { x: 0.28, y: 0.10, z: -0.92 }
+        ];
+        const vPos = vrOffsets[Math.floor(Math.random() * vrOffsets.length)];
+        vrPhonePanel.position.set(vPos.x, vPos.y, vPos.z);
+        vrPhonePanel.userData.render({ ...notif, btnAlign: selectedAlign });
         vrPhonePanel.visible = true;
     }
 

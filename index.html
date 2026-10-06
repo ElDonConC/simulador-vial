@@ -214,16 +214,16 @@
             </div>
         </div>
 
-        <!-- Popup Smartphone (Distracción Whatsapp) -->
+        <!-- Popup Smartphone (Distracción Whatsapp Dinámico) -->
         <div id="phone-distraction"
-            class="hidden pointer-events-auto absolute top-[20%] left-1/2 -translate-x-1/2 w-80 bg-slate-100 rounded-[2.2rem] shadow-2xl overflow-hidden phone-shake z-50 border-[6px] border-slate-900 shadow-cyan-500/10">
-            <div class="bg-[#075e54] text-white p-4 flex justify-between items-center">
+            class="hidden pointer-events-auto absolute w-72 sm:w-80 bg-slate-100 rounded-[2.2rem] shadow-2xl overflow-hidden phone-shake z-50 border-[6px] border-slate-900 shadow-cyan-500/10 transition-all duration-300">
+            <div id="phone-header" class="bg-[#075e54] text-white p-3.5 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold border border-white/30">
+                    <div id="phone-avatar" class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold border border-white/30">
                         👩
                     </div>
                     <div>
-                        <span class="font-bold block text-sm leading-tight">Mamá</span>
+                        <span id="phone-sender" class="font-bold block text-sm leading-tight">Mamá</span>
                         <span class="text-[10px] text-emerald-200 flex items-center gap-1">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> escribiendo...
                         </span>
@@ -231,12 +231,12 @@
                 </div>
                 <span class="text-[11px] text-emerald-200 font-mono">Ahora</span>
             </div>
-            <div class="p-5 text-slate-800 text-sm leading-relaxed font-medium bg-white">
-                ¿A qué hora llegas? 😡 ¡Acuérdate que mañana tienes que levantarte temprano! Respóndeme por favor.
+            <div id="phone-body" class="p-4 text-slate-800 text-xs sm:text-sm leading-relaxed font-medium bg-white">
+                ¿A qué hora llegas? 😡 ¡Acuérdate que mañana tienes que levantarte temprano!
             </div>
-            <div class="bg-slate-100 p-3 border-t border-slate-200 text-center">
-                <button onclick="dismissDistraction()"
-                    class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs w-full py-3 rounded-xl shadow-md transition-transform active:scale-95">
+            <div id="phone-footer" class="bg-slate-100 p-2.5 border-t border-slate-200 text-center">
+                <button id="phone-btn-dismiss" onclick="dismissDistraction()"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95">
                     🚫 Dejar de mirar el teléfono
                 </button>
             </div>

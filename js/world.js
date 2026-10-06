@@ -295,7 +295,12 @@ function createVRPhoneDistraction() {
     const ctx = canvas.getContext('2d');
     let texture = null;
 
-    function render(title, sender, text) {
+    function render(data) {
+        const sender = data && data.sender ? data.sender : 'Mamá';
+        const avatar = data && data.avatar ? data.avatar : '👩';
+        const lines = (data && data.lines) ? data.lines : ['¿A qué hora llegas? 😡', '¡Mañana tienes que levantarte temprano!', '¡Respóndeme por favor!'];
+        const btnAlign = data && data.btnAlign ? data.btnAlign : 'center';
+
         // Marco de teléfono redondeado
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, 1024, 1024);
@@ -316,12 +321,12 @@ function createVRPhoneDistraction() {
         ctx.fillStyle = '#ffffff';
         ctx.font = '80px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('👩', 120, 155);
+        ctx.fillText(avatar, 120, 155);
 
         // Nombre y estado
         ctx.textAlign = 'left';
         ctx.font = 'bold 54px sans-serif';
-        ctx.fillText(sender || 'Mamá', 230, 120);
+        ctx.fillText(sender, 230, 120);
 
         ctx.fillStyle = '#6ee7b7';
         ctx.font = '36px sans-serif';
@@ -329,34 +334,43 @@ function createVRPhoneDistraction() {
 
         // Cuerpo del mensaje (Burbuja blanca)
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(60, 290, 904, 460);
+        ctx.fillRect(60, 280, 904, 480);
         ctx.strokeStyle = '#e2e8f0';
         ctx.lineWidth = 4;
-        ctx.strokeRect(60, 290, 904, 460);
+        ctx.strokeRect(60, 280, 904, 480);
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 44px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('¿A qué hora llegas? 😡', 512, 390);
-        ctx.font = '38px sans-serif';
-        ctx.fillText('¡Mañana tienes que levantarte temprano!', 512, 470);
-        ctx.fillText('¡Respóndeme por favor!', 512, 540);
+        lines.forEach((line, i) => {
+            ctx.font = (i === 0) ? 'bold 44px sans-serif' : '38px sans-serif';
+            ctx.fillText(line, 512, 380 + (i * 70));
+        });
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = 'bold 30px monospace';
-        ctx.fillText('19:42 • WhatsApp', 512, 680);
+        ctx.fillText('19:42 • WhatsApp', 512, 700);
 
-        // Botón rojo inferior para cerrar
+        // Botón rojo inferior para cerrar (Con posición variable)
+        let btnX = 80;
+        let btnW = 864;
+        if (btnAlign === 'left') {
+            btnX = 60;
+            btnW = 600;
+        } else if (btnAlign === 'right') {
+            btnX = 364;
+            btnW = 600;
+        }
+
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(80, 800, 864, 160);
+        ctx.fillRect(btnX, 800, btnW, 160);
         ctx.strokeStyle = '#fca5a5';
         ctx.lineWidth = 6;
-        ctx.strokeRect(80, 800, 864, 160);
+        ctx.strokeRect(btnX, 800, btnW, 160);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 46px sans-serif';
+        ctx.font = 'bold 44px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('🚫 PRESIONA GATILLO PARA CERRAR', 512, 900);
+        ctx.fillText('🚫 PRESIONA GATILLO PARA CERRAR', btnX + (btnW / 2), 900);
 
         if (texture) texture.needsUpdate = true;
     }
@@ -366,7 +380,7 @@ function createVRPhoneDistraction() {
     texture.magFilter = THREE.LinearFilter;
     texture.generateMipmaps = true;
 
-    render('WhatsApp', 'Mamá', '¿A qué hora llegas?');
+    render();
 
     const planeGeo = new THREE.PlaneGeometry(1.0, 1.0);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
