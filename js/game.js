@@ -452,10 +452,10 @@ function triggerGameOver(obstacleType) {
             (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
     }
 
-    // Mostrar panel flotante 3D si estamos en Realidad Virtual
+    // Mostrar panel flotante 3D si estamos en Realidad Virtual (A la altura perfecta de los ojos)
     if (renderer.xr.isPresenting && vrGameOverPanel) {
         vrGameOverPanel.userData.update('¡IMPACTO FATAL!', obstacleType === 'pedestrian' ? 'Atropello a peatón en cruce' : 'Colisión frontal contra vehículo', `${currentKmh} KM/H • ${reactionSeconds.split(' ')[0]}`);
-        vrGameOverPanel.position.set(player.position.x - 0.5, 1.3, player.position.z - 1.4);
+        vrGameOverPanel.position.set(player.position.x - 0.5, 1.65, player.position.z - 1.3);
         vrGameOverPanel.visible = true;
     }
 
@@ -571,14 +571,17 @@ function animate() {
                             vrHitMarker.visible = true;
                             hitFound = true;
 
-                            // Mapear coordenada UV de impacto a las 4 opciones
+                            // Mapear coordenada UV de impacto a las 4 opciones (de 1680px de altura)
                             if (hit.uv) {
                                 const uvY = hit.uv.y; // 1.0 (arriba) a 0.0 (abajo)
-                                // Opciones distribuidas en el tercio central
-                                if (uvY > 0.62 && uvY <= 0.82) rayPointedIdx = 0;
-                                else if (uvY > 0.48 && uvY <= 0.62) rayPointedIdx = 1;
-                                else if (uvY > 0.35 && uvY <= 0.48) rayPointedIdx = 2;
-                                else if (uvY > 0.21 && uvY <= 0.35) rayPointedIdx = 3;
+                                // Item 0: y 350-535 -> uv 0.68 a 0.79
+                                // Item 1: y 565-750 -> uv 0.55 a 0.66
+                                // Item 2: y 780-965 -> uv 0.42 a 0.53
+                                // Item 3: y 995-1180 -> uv 0.29 a 0.40
+                                if (uvY >= 0.67 && uvY <= 0.81) rayPointedIdx = 0;
+                                else if (uvY >= 0.54 && uvY < 0.67) rayPointedIdx = 1;
+                                else if (uvY >= 0.41 && uvY < 0.54) rayPointedIdx = 2;
+                                else if (uvY >= 0.28 && uvY < 0.41) rayPointedIdx = 3;
                             }
                             break;
                         }

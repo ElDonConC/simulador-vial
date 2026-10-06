@@ -209,141 +209,190 @@ function createPedestrian() {
     return group;
 }
 
-// Panel Flotante 3D para Game Over dentro de VR
+// Panel Flotante 3D para Game Over dentro de VR (Ultra Alta Definición 2048x1200)
 function createVRGameOverPanel() {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 300;
+    canvas.width = 2048;
+    canvas.height = 1200;
     const ctx = canvas.getContext('2d');
+    let texture = null;
 
     function update(title, desc, stats) {
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.95)';
-        ctx.fillRect(0, 0, 512, 300);
+        // Fondo translúcido con gradiente y blur visual
+        ctx.fillStyle = 'rgba(8, 12, 24, 0.98)';
+        ctx.fillRect(0, 0, 2048, 1200);
         
         ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 6;
-        ctx.strokeRect(6, 6, 500, 288);
+        ctx.lineWidth = 16;
+        ctx.strokeRect(16, 16, 2016, 1168);
 
+        // Header Alerta
         ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 36px sans-serif';
+        ctx.font = 'bold 96px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(title, 256, 55);
+        ctx.fillText(title, 1024, 180);
 
-        ctx.fillStyle = '#cbd5e1';
-        ctx.font = '18px sans-serif';
-        ctx.fillText(desc, 256, 100);
+        // Línea divisoria
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(824, 220, 400, 8);
+
+        // Descripción de causa del siniestro
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 54px sans-serif';
+        ctx.fillText(desc, 1024, 340);
+
+        // Estadísticas clave de telemetría de impacto
         if (stats) {
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+            ctx.fillRect(160, 430, 1728, 220);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(160, 430, 1728, 220);
+
             ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 22px monospace';
-            ctx.fillText(stats, 256, 150);
+            ctx.font = 'bold 64px monospace';
+            ctx.fillText(stats, 1024, 560);
         }
 
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(56, 200, 400, 65);
+        // Botón de acción grande
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(260, 740, 1528, 200);
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(260, 740, 1528, 200);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px sans-serif';
-        ctx.fillText('🎮 PRESIONA GATILLO O BOTÓN A', 256, 242);
+        ctx.font = 'bold 68px sans-serif';
+        ctx.fillText('🎮 PRESIONA GATILLO O BOTÓN A PARA REINTENTAR', 1024, 865);
+
+        // Subtexto
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('O pulsa Botón B / Y para volver al Menú Principal', 1024, 1050);
 
         if (texture) texture.needsUpdate = true;
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
+    texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+
     update('¡IMPACTO FATAL!', 'Colisión de tránsito vehicular', 'T. Reacción anulado');
 
-    const planeGeo = new THREE.PlaneGeometry(2.6, 1.5);
+    const planeGeo = new THREE.PlaneGeometry(2.8, 1.65);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.userData = { canvas, ctx, texture, update };
     return mesh;
 }
 
-// Menú Flotante 3D para seleccionar modo en VR (Normal / Alcohol / Distraído)
+// Menú Flotante 3D para seleccionar modo en VR (Ultra Alta Definición 2048x1680)
 function createVRMenuPanel() {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 420;
+    canvas.width = 2048;
+    canvas.height = 1680;
     const ctx = canvas.getContext('2d');
     let texture = null;
 
     function render(selectedIdx) {
-        ctx.fillStyle = 'rgba(10, 15, 30, 0.96)';
-        ctx.fillRect(0, 0, 512, 420);
+        ctx.fillStyle = 'rgba(8, 12, 26, 0.98)';
+        ctx.fillRect(0, 0, 2048, 1680);
 
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 6;
-        ctx.strokeRect(6, 6, 500, 408);
+        ctx.lineWidth = 18;
+        ctx.strokeRect(18, 18, 2012, 1644);
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 28px sans-serif';
+        // Badge Educleta
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.fillRect(780, 50, 488, 64);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(780, 50, 488, 64);
+        ctx.fillStyle = '#f87171';
+        ctx.font = 'bold 36px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('METAVERSO VIAL VR', 256, 40);
+        ctx.fillText('ONG EDUCLETA', 1024, 96);
+
+        // Título Principal
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 92px sans-serif';
+        ctx.fillText('METAVERSO VIAL VR', 1024, 210);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '14px sans-serif';
-        ctx.fillText('Apunta con el láser o mueve joystick ↑/↓', 256, 66);
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('Apunta con el láser azul y presiona Gatillo para elegir', 1024, 290);
 
         const currentVolPercent = Math.round(currentVolume * 100);
         const modes = [
-            { title: '1. Conducción Atenta (Lúcido)', color: selectedIdx === 0 ? '#2563eb' : '#1e293b', text: '#ffffff' },
-            { title: '2. Bajo Efectos del Alcohol 🍺', color: selectedIdx === 1 ? '#9333ea' : '#1e293b', text: '#ffffff' },
-            { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' },
-            { title: `🔊 Volumen de Audio: ${currentVolPercent}% (Pulsar para cambiar)`, color: selectedIdx === 3 ? '#0284c7' : '#0f172a', text: '#38bdf8' }
+            { title: '1. Conducción Atenta (100% Lúcido)', sub: 'Reflejos normales y control al 100%', color: '#2563eb', border: '#60a5fa' },
+            { title: '2. Bajo Efectos del Alcohol 🍺', sub: 'Visión en túnel, retardo neuromuscular y desvío', color: '#9333ea', border: '#c084fc' },
+            { title: '3. Conducción Distraída (Celular) 📱', sub: 'Ceguera inatencional por mensajes de WhatsApp', color: '#d97706', border: '#fbbf24' },
+            { title: `🔊 Volumen de Audio: ${currentVolPercent}%`, sub: 'Toca con el láser para alternar el nivel de sonido', color: '#0284c7', border: '#38bdf8' }
         ];
 
         modes.forEach((m, idx) => {
-            const y = 84 + idx * 54;
+            const y = 350 + idx * 215;
             const isSel = (selectedIdx === idx);
 
             // Fondo del botón
-            ctx.fillStyle = isSel ? m.color : '#1e293b';
-            ctx.fillRect(30, y, 452, 46);
+            ctx.fillStyle = isSel ? m.color : 'rgba(30, 41, 59, 0.9)';
+            ctx.fillRect(100, y, 1848, 185);
 
             // Borde brillante e indicador de puntero si está seleccionado
-            if (isSel) {
-                ctx.strokeStyle = '#38bdf8';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(30, y, 452, 46);
+            ctx.strokeStyle = isSel ? '#38bdf8' : '#475569';
+            ctx.lineWidth = isSel ? 10 : 4;
+            ctx.strokeRect(100, y, 1848, 185);
 
-                // Flecha / Puntero activo visual
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 22px sans-serif';
+            if (isSel) {
+                // Flechas grandes llamativas
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 74px sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText('👉', 38, y + 31);
+                ctx.fillText('👉', 130, y + 115);
                 ctx.textAlign = 'right';
-                ctx.fillText('👈', 474, y + 31);
+                ctx.fillText('👈', 1918, y + 115);
             }
 
-            ctx.fillStyle = isSel ? '#ffffff' : '#94a3b8';
-            ctx.font = isSel ? 'bold 17px sans-serif' : '15px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(m.title, 256, y + 29);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = isSel ? '900 58px sans-serif' : 'bold 52px sans-serif';
+            ctx.fillText(m.title, 1024, y + 80);
+
+            ctx.fillStyle = isSel ? '#e2e8f0' : '#94a3b8';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText(m.sub, 1024, y + 140);
         });
 
         // Caja de ayuda con los controles en las gafas
-        ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
-        ctx.fillRect(30, 308, 452, 94);
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(30, 308, 452, 94);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
+        ctx.fillRect(100, 1240, 1848, 380);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(100, 1240, 1848, 380);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText('🕹️ CONTROLES EN META QUEST:', 256, 328);
+        ctx.font = 'bold 50px sans-serif';
+        ctx.fillText('🕹️ GUÍA DE CONTROLES EN META QUEST:', 1024, 1315);
 
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('• Apuntar y Gatillo: Seleccionar modo', 256, 348);
-        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 256, 368);
-        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 256, 386);
+        ctx.font = 'bold 40px sans-serif';
+        ctx.fillText('• Apuntar Láser y Gatillo: Elegir opción / Entrar', 1024, 1385);
+        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 1024, 1455);
+        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 1024, 1525);
+        ctx.fillText('• Soltar Freno: El vehículo recupera aceleración normal', 1024, 1585);
 
         if (texture) texture.needsUpdate = true;
     }
 
     texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+
     render(0);
 
-    const planeGeo = new THREE.PlaneGeometry(2.3, 1.9);
+    const planeGeo = new THREE.PlaneGeometry(2.4, 1.95);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };
