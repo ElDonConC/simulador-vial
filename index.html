@@ -7,12 +7,22 @@
     <title>Metaverso Vial - ONG Educleta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #111;
-            font-family: 'Inter', sans-serif;
+            background-color: #030712;
+            font-family: 'Outfit', sans-serif;
             touch-action: none;
         }
 
@@ -23,7 +33,7 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            transition: filter 2s ease;
+            transition: filter 1.5s ease;
         }
 
         #ui-layer {
@@ -40,40 +50,47 @@
             pointer-events: auto;
         }
 
-        /* Efecto de embriaguez aplicado al canvas */
+        /* Efecto de embriaguez extremo: doble visión, desorientación cromática y ondulación */
         .drunk-effect {
-            filter: blur(3px) contrast(1.3) hue-rotate(15deg) saturate(1.5);
-            animation: wobble 4s infinite ease-in-out alternate;
+            filter: blur(3.5px) contrast(1.35) hue-rotate(-25deg) saturate(2.2);
+            animation: drunkSway 4.5s infinite ease-in-out alternate;
         }
 
-        @keyframes wobble {
+        @keyframes drunkSway {
             0% {
-                transform: scale(1.05) rotate(-1deg);
+                transform: scale(1.04) rotate(-2deg) skewX(-1deg);
             }
-
+            50% {
+                transform: scale(1.08) rotate(1.8deg) skewY(1deg);
+            }
             100% {
-                transform: scale(1.05) rotate(1deg);
+                transform: scale(1.04) rotate(-1.5deg) skewX(1deg);
             }
         }
 
-        /* Notificación del celular */
-        .notification-popup {
-            animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        /* Notificación emergente estilo smartphone moderno */
+        .phone-shake {
+            animation: phonePop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, phoneVibe 0.2s 0.5s 3;
         }
 
-        @keyframes slideDown {
+        @keyframes phonePop {
             from {
-                transform: translateY(-100%) translateX(-50%);
+                transform: translateY(-120%) translateX(-50%) scale(0.9);
                 opacity: 0;
             }
-
             to {
-                transform: translateY(0) translateX(-50%);
+                transform: translateY(0) translateX(-50%) scale(1);
                 opacity: 1;
             }
         }
 
-        /* Controles táctiles móviles */
+        @keyframes phoneVibe {
+            0%, 100% { transform: translateY(0) translateX(-50%); }
+            25% { transform: translateY(-4px) translateX(-52%); }
+            75% { transform: translateY(4px) translateX(-48%); }
+        }
+
+        /* Zonas de control táctil invisibles */
         #touch-left,
         #touch-right {
             position: absolute;
@@ -82,513 +99,756 @@
             height: 100%;
             z-index: 5;
         }
+        #touch-left { left: 0; }
+        #touch-right { right: 0; }
 
-        #touch-left {
-            left: 0;
+        /* Estilo Dashboard Digital / Instrumentos */
+        .hud-glass {
+            background: linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.85) 45%, rgba(2,6,23,0.98) 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
         }
 
-        #touch-right {
-            right: 0;
+        .crt-glow {
+            font-family: 'Space Grotesk', monospace;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(56, 189, 248, 0.4);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Parabrisas con sutil tinte y reflejo */
+        .windshield-tint {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 2;
+            background: radial-gradient(circle at 50% 30%, transparent 40%, rgba(10, 15, 30, 0.35) 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.6);
         }
     </style>
 </head>
 
-<body class="text-white select-none">
+<body class="text-white">
 
-    <!-- Contenedor del render 3D -->
+    <!-- Render 3D Cabina FPV -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- Zonas táctiles para móvil -->
-    <div id="touch-left" class="hidden"></div>
-    <div id="touch-right" class="hidden"></div>
+    <!-- Efecto viñeta / parabrisas -->
+    <div class="windshield-tint"></div>
 
-    <!-- Capa de Interfaz de Usuario -->
-    <div id="ui-layer" class="flex flex-col items-center justify-center">
+    <!-- Zonas de control táctil para móviles -->
+    <div id="touch-left"></div>
+    <div id="touch-right"></div>
+
+    <!-- Capa de Interfaz y Menús -->
+    <div id="ui-layer" class="flex flex-col items-center justify-center relative">
+
+        <!-- Selector de Cámara Flotante (Durante el juego) -->
+        <div id="cam-toggle" class="hidden pointer-events-auto absolute top-5 right-5 z-40 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-semibold text-slate-300 shadow-lg cursor-pointer hover:bg-slate-800 transition" onclick="toggleCameraView()">
+            <span id="cam-icon">👁️</span>
+            <span id="cam-label">Cámara: 1ra Persona</span>
+            <span class="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] text-slate-400">Tecla C</span>
+        </div>
 
         <!-- Menú Principal -->
         <div id="main-menu"
-            class="pointer-events-auto bg-slate-900/90 p-8 rounded-2xl shadow-2xl border border-slate-700 max-w-md w-11/12 text-center backdrop-blur-sm transition-opacity duration-300">
-            <div class="mb-6">
-                <span class="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">ONG
-                    Educleta</span>
-                <h1 class="text-3xl font-extrabold mt-2 text-white">Metaverso Vial</h1>
-                <p class="text-slate-400 mt-2 text-sm">Experimenta las consecuencias sin sufrir los riesgos. Elige tu
-                    estado para conducir:</p>
-            </div>
-
-            <div class="flex flex-col gap-4">
-                <button onclick="startGame('normal')"
-                    class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                    🚗 Conducción Normal
-                </button>
-                <button onclick="startGame('drunk')"
-                    class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                    🍺 Bajo efectos del Alcohol
-                </button>
-                <button onclick="startGame('distracted')"
-                    class="bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-                    📱 Conducción Distraída
-                </button>
-            </div>
-
-            <div class="mt-6 text-xs text-slate-500">
-                Controles: Flechas ← Izquierda / Derecha → <br> (O toca los lados de la pantalla en móvil)
-            </div>
-        </div>
-
-        <!-- HUD en Juego -->
-        <div id="hud"
-            class="absolute top-4 left-4 right-4 flex justify-between items-start opacity-0 transition-opacity duration-300">
-            <div class="bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-700 backdrop-blur-sm">
-                <span class="text-slate-400 text-xs uppercase tracking-wider block">Estado</span>
-                <span id="hud-status" class="font-bold text-blue-400">Normal</span>
-            </div>
-            <div class="bg-slate-900/80 px-4 py-2 rounded-lg border border-slate-700 backdrop-blur-sm text-right">
-                <span class="text-slate-400 text-xs uppercase tracking-wider block">Puntaje</span>
-                <span id="hud-score" class="font-bold text-white text-xl">0</span>
-            </div>
-        </div>
-
-        <!-- Pop-up de Distracción (Celular) -->
-        <div id="phone-distraction"
-            class="hidden pointer-events-auto absolute top-1/4 left-1/2 -translate-x-1/2 w-72 bg-white rounded-2xl shadow-2xl overflow-hidden notification-popup z-50">
-            <div class="bg-green-500 text-white p-3 flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm">M</div>
-                    <span class="font-bold">Mamá</span>
+            class="pointer-events-auto bg-slate-950/90 p-8 sm:p-10 rounded-3xl shadow-2xl border border-slate-800/80 max-w-lg w-11/12 text-center backdrop-blur-xl transition-all duration-300">
+            <div class="mb-8">
+                <div class="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold px-3.5 py-1.5 rounded-full uppercase tracking-widest">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    ONG Educleta
                 </div>
-                <span class="text-xs opacity-80 text-nowrap">Ahora mismo</span>
-            </div>
-            <div class="p-4 text-slate-800 text-sm">
-                ¿A qué hora llegas? Acuérdate que mañana tienes que levantarte temprano...
-            </div>
-            <div class="border-t border-slate-100 p-2 text-center bg-slate-50">
-                <button onclick="dismissDistraction()"
-                    class="text-red-500 font-bold text-sm w-full py-2 hover:bg-slate-200 rounded">Cerrar
-                    Notificación</button>
-            </div>
-        </div>
-
-        <!-- Pantalla de Game Over -->
-        <div id="game-over"
-            class="hidden pointer-events-auto absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-8 text-center z-50 backdrop-blur-md">
-            <h2 class="text-5xl font-black text-red-500 mb-4 animate-pulse">¡IMPACTO!</h2>
-            <div class="bg-red-900/50 border border-red-500/50 rounded-xl p-6 max-w-md mb-8">
-                <p id="game-over-message" class="text-lg text-white font-medium leading-relaxed">
-                    Mensaje de error.
+                <h1 class="text-4xl sm:text-5xl font-black mt-4 text-white tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                    METAVERSO VIAL
+                </h1>
+                <p class="text-slate-400 mt-3 text-sm leading-relaxed">
+                    Experiencia inmersiva en primera persona (POV). Comprueba en carne propia cómo el alcohol y el celular anulan tu tiempo de reacción.
                 </p>
             </div>
-            <div class="text-slate-300 mb-8">
-                Sobreviviste: <span id="final-score" class="font-bold text-white text-2xl">0</span> metros.
+
+            <div class="flex flex-col gap-3.5">
+                <button onclick="startGame('normal')"
+                    class="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-5 rounded-2xl shadow-lg shadow-blue-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl p-1 bg-white/10 rounded-lg">🚗</span>
+                        <div class="text-left">
+                            <div class="text-base leading-tight">Conducción Atenta</div>
+                            <div class="text-xs text-blue-200 font-normal">Reflejos y control al 100%</div>
+                        </div>
+                    </div>
+                    <span class="text-white/60 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+
+                <button onclick="startGame('drunk')"
+                    class="group relative overflow-hidden bg-gradient-to-r from-purple-800/90 to-fuchsia-900/90 hover:from-purple-700 hover:to-fuchsia-800 text-white font-bold py-4 px-5 rounded-2xl border border-purple-500/30 shadow-lg shadow-purple-900/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl p-1 bg-white/10 rounded-lg">🍺</span>
+                        <div class="text-left">
+                            <div class="text-base leading-tight">Bajo Efectos del Alcohol</div>
+                            <div class="text-xs text-purple-200 font-normal">Retardo motriz, visión borrosa y desvío</div>
+                        </div>
+                    </div>
+                    <span class="text-white/60 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
+
+                <button onclick="startGame('distracted')"
+                    class="group relative overflow-hidden bg-gradient-to-r from-amber-700/90 to-orange-700/90 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-4 px-5 rounded-2xl border border-orange-500/30 shadow-lg shadow-orange-900/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl p-1 bg-white/10 rounded-lg">📱</span>
+                        <div class="text-left">
+                            <div class="text-base leading-tight">Conducción Distraída</div>
+                            <div class="text-xs text-orange-200 font-normal">Ceguera inatencional por smartphone</div>
+                        </div>
+                    </div>
+                    <span class="text-white/60 group-hover:translate-x-1 transition-transform">→</span>
+                </button>
             </div>
-            <button onclick="resetGame()"
-                class="bg-white text-red-900 hover:bg-slate-200 font-bold py-3 px-8 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95">
-                Volver a intentar
-            </button>
+
+            <div class="mt-8 text-xs text-slate-500 flex justify-center items-center gap-4">
+                <span>⌨️ <b>Flechas ← →</b> o <b>A / D</b></span>
+                <span>•</span>
+                <span>📱 <b>Toca los costados</b></span>
+                <span>•</span>
+                <span>🎥 <b>C (Cambiar Vista)</b></span>
+            </div>
+        </div>
+
+        <!-- Tablero Dashboard FPV (HUD Inferior) -->
+        <div id="hud"
+            class="absolute bottom-0 left-0 right-0 h-36 hud-glass flex justify-between items-end px-6 sm:px-12 pb-5 opacity-0 transition-opacity duration-500">
+            
+            <div class="flex flex-col gap-1">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Estado Mental</span>
+                <div class="flex items-center gap-2">
+                    <span id="hud-status-dot" class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+                    <span id="hud-status" class="font-bold text-blue-400 text-base sm:text-lg uppercase tracking-wider">Óptimo</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center absolute left-1/2 -translate-x-1/2 bottom-5">
+                <div class="flex items-baseline gap-1">
+                    <span id="hud-speed" class="font-black text-5xl sm:text-6xl text-sky-400 crt-glow">60</span>
+                    <span class="text-sky-500 font-bold text-sm">KM/H</span>
+                </div>
+                <div class="w-36 sm:w-48 h-1.5 bg-slate-800/90 rounded-full mt-2 overflow-hidden p-0.5 border border-slate-700/50">
+                    <div id="rpm-bar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-full w-1/3 transition-all duration-100"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col text-right gap-1">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Recorrido Seguro</span>
+                <span id="hud-score" class="font-bold text-slate-200 text-xl font-mono">0.0 km</span>
+            </div>
+        </div>
+
+        <!-- Popup Smartphone (Distracción Whatsapp) -->
+        <div id="phone-distraction"
+            class="hidden pointer-events-auto absolute top-[20%] left-1/2 -translate-x-1/2 w-80 bg-slate-100 rounded-[2.2rem] shadow-2xl overflow-hidden phone-shake z-50 border-[6px] border-slate-900 shadow-cyan-500/10">
+            <div class="bg-[#075e54] text-white p-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold border border-white/30">
+                        👩
+                    </div>
+                    <div>
+                        <span class="font-bold block text-sm leading-tight">Mamá</span>
+                        <span class="text-[10px] text-emerald-200 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> escribiendo...
+                        </span>
+                    </div>
+                </div>
+                <span class="text-[11px] text-emerald-200 font-mono">Ahora</span>
+            </div>
+            <div class="p-5 text-slate-800 text-sm leading-relaxed font-medium bg-white">
+                ¿A qué hora llegas? 😡 ¡Acuérdate que mañana tienes que levantarte temprano! Respóndeme por favor.
+            </div>
+            <div class="bg-slate-100 p-3 border-t border-slate-200 text-center">
+                <button onclick="dismissDistraction()"
+                    class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs w-full py-3 rounded-xl shadow-md transition-transform active:scale-95">
+                    🚫 Dejar de mirar el teléfono
+                </button>
+            </div>
+        </div>
+
+        <!-- Pantalla de Colisión y Reflexión (Game Over) -->
+        <div id="game-over"
+            class="hidden pointer-events-auto absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center z-50 backdrop-blur-2xl transition-all duration-700">
+            <div class="inline-flex items-center gap-2 bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest mb-3 animate-pulse">
+                Accidente de Tránsito
+            </div>
+            <h2 class="text-5xl sm:text-7xl font-black text-red-500 mb-2 tracking-tight drop-shadow-[0_0_35px_rgba(239,68,68,0.5)]">
+                ¡IMPACTO FATAL!
+            </h2>
+            <div class="w-20 h-1 bg-red-500/60 mb-6 rounded-full"></div>
+
+            <div class="bg-slate-900/90 border border-red-500/30 rounded-3xl p-6 sm:p-8 max-w-xl w-full mb-6 shadow-2xl backdrop-blur-md">
+                <p id="game-over-message" class="text-lg sm:text-xl text-slate-200 font-normal leading-relaxed text-left sm:text-center">
+                    Mensaje de reflexión.
+                </p>
+                <div id="game-over-stats" class="mt-6 pt-6 border-t border-slate-800 grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                    <!-- Estadísticas inyectadas -->
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="resetGame()"
+                    class="bg-white hover:bg-slate-100 text-slate-950 font-black py-4 px-8 rounded-2xl shadow-xl transition-all transform hover:scale-105 active:scale-95 text-base flex items-center justify-center gap-2">
+                    <span>🔄</span> Volver a Intentar
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Variables de estado del juego
-        let gameState = 'menu'; // menu, playing, gameover
+        // ============================================================
+        // ESTADO GLOBAL DEL SIMULADOR
+        // ============================================================
+        let gameState = 'menu'; // menu, playing, crashing, gameover
         let currentMode = 'normal'; // normal, drunk, distracted
         let score = 0;
-        let speed = 0.8;
+        let speedMultiplier = 0.6;
+        let cameraMode = 'fpv'; // 'fpv' (1ra persona) | 'tpv' (3ra persona chase)
 
         // Elementos UI
         const elMainMenu = document.getElementById('main-menu');
         const elGameOver = document.getElementById('game-over');
         const elHud = document.getElementById('hud');
         const elStatus = document.getElementById('hud-status');
+        const elStatusDot = document.getElementById('hud-status-dot');
         const elScore = document.getElementById('hud-score');
+        const elSpeed = document.getElementById('hud-speed');
+        const elRpmBar = document.getElementById('rpm-bar');
         const elMessage = document.getElementById('game-over-message');
+        const elStats = document.getElementById('game-over-stats');
         const elCanvas = document.getElementById('game-canvas');
         const elDistraction = document.getElementById('phone-distraction');
+        const elCamToggle = document.getElementById('cam-toggle');
+        const elCamLabel = document.getElementById('cam-label');
 
-        // Control de distracción
-        let distractionInterval;
-        let isDistractionActive = false;
+        // ============================================================
+        // SÍNTESIS DE AUDIO REALISTA (Tone.js)
+        // ============================================================
+        let audioInitialized = false;
+        let engineNoise, engineFilter, crashSynth, notificationSynth, skidSynth, sirenSynth;
 
-        // Configuración Three.js
+        async function initAudio() {
+            if (audioInitialized) return;
+            try {
+                await Tone.start();
+
+                // Sonido de motor con síntesis continua
+                engineNoise = new Tone.Noise("brown").start();
+                engineFilter = new Tone.Filter(220, "lowpass").toDestination();
+                engineNoise.connect(engineFilter);
+                engineNoise.volume.value = -Infinity;
+
+                // Explosión de impacto
+                crashSynth = new Tone.NoiseSynth({
+                    noise: { type: "white" },
+                    envelope: { attack: 0.005, decay: 1.8, sustain: 0, release: 0.8 }
+                }).toDestination();
+
+                // Chillido de frenada
+                skidSynth = new Tone.NoiseSynth({
+                    noise: { type: "pink" },
+                    envelope: { attack: 0.08, decay: 0.6, sustain: 0, release: 0.3 }
+                }).toDestination();
+
+                // Notificación tipo teléfono
+                notificationSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.12, sustain: 0.05, release: 0.4 }
+                }).toDestination();
+                notificationSynth.volume.value = 4;
+
+                audioInitialized = true;
+            } catch (err) {
+                console.warn("Audio Context error:", err);
+            }
+        }
+
+        // ============================================================
+        // THREE.JS SCENE SETUP
+        // ============================================================
         const scene = new THREE.Scene();
-        // Niebla para ocultar la aparición de objetos y dar ambiente oscuro
-        scene.fog = new THREE.Fog(0x111111, 20, 80);
+        scene.fog = new THREE.FogExp2(0x060914, 0.014); // Niebla nocturna inmersiva
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-        // La cámara se sitúa detrás y ligeramente por encima del auto del jugador
-        camera.position.set(0, 3, 7);
-        camera.lookAt(0, 0, -10);
-
-        const renderer = new THREE.WebGLRenderer({ canvas: elCanvas, antialias: true });
+        const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 250);
+        const renderer = new THREE.WebGLRenderer({ canvas: elCanvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x111111);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x060914);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // Iluminación ambiental y direccional mejorada
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Iluminación global
+        const ambientLight = new THREE.AmbientLight(0x334155, 0.6);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
-        dirLight.position.set(15, 30, 20);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        const moonLight = new THREE.DirectionalLight(0x93c5fd, 1.0);
+        moonLight.position.set(-25, 45, -20);
+        moonLight.castShadow = true;
+        moonLight.shadow.mapSize.width = 1024;
+        moonLight.shadow.mapSize.height = 1024;
+        scene.add(moonLight);
 
-        const hemiLight = new THREE.HemisphereLight(0x446688, 0x111122, 0.5);
-        scene.add(hemiLight);
+        // ============================================================
+        // GENERACIÓN PROCEDURAL DE CIUDAD Y CALLES
+        // ============================================================
+        const roadChunks = [];
+        const numChunks = 12;
+        const chunkLength = 40;
 
-        // Carretera con aceras / bermas
-        const roadGroup = new THREE.Group();
-        const roadGeo = new THREE.PlaneGeometry(13, 200);
-        const roadMat = new THREE.MeshStandardMaterial({ color: 0x1c1d21, roughness: 0.85 });
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI / 2;
-        road.receiveShadow = true;
-        roadGroup.add(road);
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.85, metalness: 0.1 });
+        const zebraMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.5 });
+        const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.9, metalness: 0.2 });
 
-        // Bordes de la carretera (Líneas continuas amarillas/blancas y bermas)
-        const shoulderGeo = new THREE.PlaneGeometry(0.3, 200);
-        const shoulderMat = new THREE.MeshBasicMaterial({ color: 0xe2b007 });
-        
-        const shoulderLeft = new THREE.Mesh(shoulderGeo, shoulderMat);
-        shoulderLeft.rotation.x = -Math.PI / 2;
-        shoulderLeft.position.set(-5.6, 0.01, 0);
-        roadGroup.add(shoulderLeft);
+        function createTrafficLight() {
+            const group = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7.5, 8), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7 }));
+            pole.position.y = 3.75;
+            pole.castShadow = true;
 
-        const shoulderRight = new THREE.Mesh(shoulderGeo, shoulderMat);
-        shoulderRight.rotation.x = -Math.PI / 2;
-        shoulderRight.position.set(5.6, 0.01, 0);
-        roadGroup.add(shoulderRight);
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.6 }));
+            box.position.set(0, 6.8, 0.2);
+            box.castShadow = true;
 
-        // Barreras laterales reflectantes / guardarraíl
-        const barrierGeo = new THREE.BoxGeometry(0.2, 0.5, 200);
-        const barrierMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.4 });
-        const barLeft = new THREE.Mesh(barrierGeo, barrierMat);
-        barLeft.position.set(-6.2, 0.25, 0);
-        roadGroup.add(barLeft);
+            const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0x000000 }));
+            rLight.position.set(0, 7.5, 0.62);
+            const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0x000000 }));
+            yLight.position.set(0, 6.8, 0.62);
+            const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x000000 }));
+            gLight.position.set(0, 6.1, 0.62);
 
-        const barRight = new THREE.Mesh(barrierGeo, barrierMat);
-        barRight.position.set(6.2, 0.25, 0);
-        roadGroup.add(barRight);
-
-        scene.add(roadGroup);
-
-        // Líneas divisoras de carril (simulación de movimiento)
-        const lines = [];
-        const lineGeo = new THREE.PlaneGeometry(0.2, 3.5);
-        const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        
-        // Carriles dobles (separando 3 pistas: x=-3.5, x=0, x=3.5)
-        for (let i = 0; i < 14; i++) {
-            const lineL = new THREE.Mesh(lineGeo, lineMat);
-            lineL.rotation.x = -Math.PI / 2;
-            lineL.position.set(-1.8, 0.012, -i * 8 + 10);
-            scene.add(lineL);
-            lines.push(lineL);
-
-            const lineR = new THREE.Mesh(lineGeo, lineMat);
-            lineR.rotation.x = -Math.PI / 2;
-            lineR.position.set(1.8, 0.012, -i * 8 + 10);
-            scene.add(lineR);
-            lines.push(lineR);
+            group.add(pole, box, rLight, yLight, gLight);
+            group.userData = { r: rLight, y: yLight, g: gLight };
+            return group;
         }
 
-        // ==========================================
-        // FABRICADOR DE MODELOS DE VEHÍCULOS 3D
-        // ==========================================
-        const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16);
-        const tireMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9 });
-        const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 12);
-        const rimMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.8, roughness: 0.2 });
-        const windowMat = new THREE.MeshPhysicalMaterial({ 
-            color: 0x0f172a, 
-            roughness: 0.1, 
-            transmission: 0.6, 
-            thickness: 0.5,
-            reflectivity: 0.9 
-        });
-        const lightFrontMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const lightBackMat = new THREE.MeshBasicMaterial({ color: 0xff1e1e });
+        function createBuilding(isLeft) {
+            const group = new THREE.Group();
+            const height = 15 + Math.random() * 25;
+            const width = 8 + Math.random() * 6;
+            const depth = 25 + Math.random() * 10;
+            
+            const bMesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMat);
+            bMesh.position.set(isLeft ? -19 - width / 2 : 19 + width / 2, height / 2, 0);
+            bMesh.castShadow = true;
+            bMesh.receiveShadow = true;
+            group.add(bMesh);
 
-        function createWheelMesh() {
-            const wheelGroup = new THREE.Group();
-            const tire = new THREE.Mesh(tireGeo, tireMat);
-            tire.rotation.z = Math.PI / 2;
-            const rim = new THREE.Mesh(rimGeo, rimMat);
-            rim.rotation.z = Math.PI / 2;
-            wheelGroup.add(tire);
-            wheelGroup.add(rim);
-            return wheelGroup;
-        }
-
-        function createCar({ color = 0x2563eb, isPlayer = false, type = 'sedan' } = {}) {
-            const car = new THREE.Group();
-            const wheels = [];
-
-            const bodyMat = new THREE.MeshStandardMaterial({ 
-                color: color, 
-                metalness: 0.4, 
-                roughness: 0.3,
-                clearcoat: 0.5,
-                clearcoatRoughness: 0.2
-            });
-            const trimMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
-
-            if (type === 'sedan' || isPlayer) {
-                // 1. Chasis Inferior
-                const chassisGeo = new THREE.BoxGeometry(1.9, 0.55, 3.8);
-                const chassis = new THREE.Mesh(chassisGeo, bodyMat);
-                chassis.position.y = 0.48;
-                car.add(chassis);
-
-                // 2. Parachoques delantero y trasero
-                const bumperFGeo = new THREE.BoxGeometry(1.86, 0.25, 0.3);
-                const bumperF = new THREE.Mesh(bumperFGeo, trimMat);
-                bumperF.position.set(0, 0.32, -1.9);
-                car.add(bumperF);
-
-                const bumperBGeo = new THREE.BoxGeometry(1.86, 0.25, 0.3);
-                const bumperB = new THREE.Mesh(bumperBGeo, trimMat);
-                bumperB.position.set(0, 0.32, 1.9);
-                car.add(bumperB);
-
-                // 3. Cabina / Techo aerodinámico
-                const cabinGeo = new THREE.BoxGeometry(1.56, 0.52, 2.0);
-                const cabin = new THREE.Mesh(cabinGeo, windowMat);
-                cabin.position.set(0, 0.95, -0.15);
-                car.add(cabin);
-
-                const roofGeo = new THREE.BoxGeometry(1.5, 0.06, 1.8);
-                const roof = new THREE.Mesh(roofGeo, bodyMat);
-                roof.position.set(0, 1.22, -0.15);
-                car.add(roof);
-
-                // 4. Espejos retrovisores
-                const mirrorGeo = new THREE.BoxGeometry(0.2, 0.12, 0.12);
-                const mirrorL = new THREE.Mesh(mirrorGeo, bodyMat);
-                mirrorL.position.set(-1.0, 0.85, -0.6);
-                const mirrorR = new THREE.Mesh(mirrorGeo, bodyMat);
-                mirrorR.position.set(1.0, 0.85, -0.6);
-                car.add(mirrorL);
-                car.add(mirrorR);
-
-                // 5. Faros Delanteros
-                const headLGeo = new THREE.BoxGeometry(0.35, 0.15, 0.1);
-                const headL = new THREE.Mesh(headLGeo, lightFrontMat);
-                headL.position.set(-0.65, 0.55, -1.9);
-                const headR = new THREE.Mesh(headLGeo, lightFrontMat);
-                headR.position.set(0.65, 0.55, -1.9);
-                car.add(headL);
-                car.add(headR);
-
-                // 6. Faros Traseros (Rojos / Freno)
-                const tailLGeo = new THREE.BoxGeometry(0.35, 0.14, 0.1);
-                const tailL = new THREE.Mesh(tailLGeo, lightBackMat);
-                tailL.position.set(-0.65, 0.55, 1.9);
-                const tailR = new THREE.Mesh(tailLGeo, lightBackMat);
-                tailR.position.set(0.65, 0.55, 1.9);
-                car.add(tailL);
-                car.add(tailR);
-
-                // Ruedas (4)
-                const wheelPositions = [
-                    [-0.95, 0.35, -1.15],
-                    [0.95, 0.35, -1.15],
-                    [-0.95, 0.35, 1.15],
-                    [0.95, 0.35, 1.15]
-                ];
-                wheelPositions.forEach(pos => {
-                    const w = createWheelMesh();
-                    w.position.set(pos[0], pos[1], pos[2]);
-                    car.add(w);
-                    wheels.push(w);
-                });
-
-                // Si es el jugador, agregar faros proyectores de luz hacia adelante y resplandor trasero
-                if (isPlayer) {
-                    const playerHeadlightL = new THREE.SpotLight(0xfff4d6, 2.5, 35, Math.PI / 6, 0.3, 1);
-                    playerHeadlightL.position.set(-0.6, 0.6, -1.8);
-                    playerHeadlightL.target.position.set(-0.6, 0, -20);
-                    car.add(playerHeadlightL);
-                    car.add(playerHeadlightL.target);
-
-                    const playerHeadlightR = new THREE.SpotLight(0xfff4d6, 2.5, 35, Math.PI / 6, 0.3, 1);
-                    playerHeadlightR.position.set(0.6, 0.6, -1.8);
-                    playerHeadlightR.target.position.set(0.6, 0, -20);
-                    car.add(playerHeadlightR);
-                    car.add(playerHeadlightR.target);
-
-                    // Pequeña luz de freno roja que ilumina la parte trasera
-                    const tailGlow = new THREE.PointLight(0xff1100, 1.2, 5);
-                    tailGlow.position.set(0, 0.6, 2.2);
-                    car.add(tailGlow);
+            // Ventanas iluminadas en el edificio
+            const winCount = 8;
+            const winGeo = new THREE.PlaneGeometry(0.8, 1.2);
+            const winMatOn = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+            for (let w = 0; w < winCount; w++) {
+                if (Math.random() > 0.4) {
+                    const win = new THREE.Mesh(winGeo, winMatOn);
+                    win.position.set(
+                        isLeft ? -19 : 19,
+                        3 + Math.random() * (height - 6),
+                        (Math.random() - 0.5) * depth * 0.8
+                    );
+                    win.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
+                    group.add(win);
                 }
-            } else if (type === 'suv' || type === 'van') {
-                // Modelo tipo Camioneta / SUV
-                const chassisGeo = new THREE.BoxGeometry(2.0, 0.7, 4.2);
-                const chassis = new THREE.Mesh(chassisGeo, bodyMat);
-                chassis.position.y = 0.65;
-                car.add(chassis);
+            }
+            return group;
+        }
 
-                const cabinGeo = new THREE.BoxGeometry(1.7, 0.7, 2.8);
-                const cabin = new THREE.Mesh(cabinGeo, windowMat);
-                cabin.position.set(0, 1.25, 0.2);
-                car.add(cabin);
+        for (let i = 0; i < numChunks; i++) {
+            const chunk = new THREE.Group();
+            const isIntersection = i % 4 === 0;
 
-                const roofGeo = new THREE.BoxGeometry(1.65, 0.08, 2.7);
-                const roof = new THREE.Mesh(roofGeo, bodyMat);
-                roof.position.set(0, 1.62, 0.2);
-                car.add(roof);
+            // Pista principal de 3 carriles
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(22, chunkLength), roadMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            chunk.add(ground);
 
-                // Faros
-                const headL = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.1), lightFrontMat);
-                headL.position.set(-0.7, 0.7, -2.1);
-                const headR = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.2, 0.1), lightFrontMat);
-                headR.position.set(0.7, 0.7, -2.1);
-                car.add(headL);
-                car.add(headR);
+            // Veredas laterales
+            const swLeft = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
+            swLeft.position.set(-13, 0.17, 0);
+            swLeft.receiveShadow = true;
+            const swRight = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
+            swRight.position.set(13, 0.17, 0);
+            swRight.receiveShadow = true;
+            chunk.add(swLeft, swRight);
 
-                const tailL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.1), lightBackMat);
-                tailL.position.set(-0.75, 1.0, 2.1);
-                const tailR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.1), lightBackMat);
-                tailR.position.set(0.75, 1.0, 2.1);
-                car.add(tailL);
-                car.add(tailR);
+            // Edificios en los lados para sensación urbana nocturna
+            chunk.add(createBuilding(true));
+            chunk.add(createBuilding(false));
 
-                // Ruedas más grandes para SUV
-                [[-1.02, 0.42, -1.3], [1.02, 0.42, -1.3], [-1.02, 0.42, 1.3], [1.02, 0.42, 1.3]].forEach(pos => {
-                    const w = createWheelMesh();
-                    w.scale.set(1.15, 1.15, 1.15);
-                    w.position.set(pos[0], pos[1], pos[2]);
-                    car.add(w);
-                    wheels.push(w);
-                });
+            if (isIntersection) {
+                // Paso de Cebra
+                for (let j = -4; j <= 4; j++) {
+                    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 5.5), zebraMat);
+                    stripe.rotation.x = -Math.PI / 2;
+                    stripe.position.set(j * 1.8, 0.02, 0);
+                    stripe.receiveShadow = true;
+                    chunk.add(stripe);
+                }
+
+                // Semáforos
+                const tlLeft = createTrafficLight();
+                tlLeft.position.set(-10.5, 0, -2);
+                tlLeft.rotation.y = Math.PI / 6;
+                const tlRight = createTrafficLight();
+                tlRight.position.set(10.5, 0, -2);
+                tlRight.rotation.y = -Math.PI / 6;
+                chunk.add(tlLeft, tlRight);
+
+                chunk.userData = { type: 'intersection', trafficLights: [tlLeft, tlRight] };
+            } else {
+                // Líneas divisorias de carril
+                const lineL = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                lineL.rotation.x = -Math.PI / 2;
+                lineL.position.set(-3.5, 0.02, 0);
+                chunk.add(lineL);
+
+                const lineR = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                lineR.rotation.x = -Math.PI / 2;
+                lineR.position.set(3.5, 0.02, 0);
+                chunk.add(lineR);
+
+                // Farola de calle
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8.5, 8), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 }));
+                pole.position.set(-10.5, 4.25, 0);
+                pole.castShadow = true;
+
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 0.15), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+                arm.position.set(-9.5, 8.4, 0);
+
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffedd5 }));
+                bulb.position.set(-8.5, 8.2, 0);
+
+                const streetLight = new THREE.SpotLight(0xffedd5, 1.8, 40, Math.PI / 3, 0.5, 1);
+                streetLight.position.set(-8.5, 8.2, 0);
+                streetLight.target.position.set(-4, 0, 0);
+                streetLight.castShadow = true;
+
+                chunk.add(pole, arm, bulb, streetLight, streetLight.target);
+                chunk.userData = { type: 'straight' };
             }
 
-            // Guardar referencia de ruedas para animar giro
-            car.userData = { wheels: wheels, type: type };
+            chunk.position.z = -i * chunkLength;
+            scene.add(chunk);
+            roadChunks.push(chunk);
+        }
+
+        // ============================================================
+        // VEHÍCULO DEL JUGADOR: CABINA POV DETALLADA
+        // ============================================================
+        const player = new THREE.Group();
+        scene.add(player);
+
+        // Capó exterior visible desde la cabina
+        const hoodGeo = new THREE.BoxGeometry(2.4, 0.35, 2.8);
+        const hoodMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.6, roughness: 0.25, clearcoat: 0.5 });
+        const hood = new THREE.Mesh(hoodGeo, hoodMat);
+        hood.position.set(0, 0.72, -1.8);
+        hood.rotation.x = 0.04;
+        hood.castShadow = true;
+        hood.receiveShadow = true;
+        player.add(hood);
+
+        // Tablero y consola interior
+        const dashGeo = new THREE.BoxGeometry(2.6, 0.45, 0.8);
+        const dashMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+        const dashboard = new THREE.Mesh(dashGeo, dashMat);
+        dashboard.position.set(0, 0.82, -0.9);
+        dashboard.castShadow = true;
+        dashboard.receiveShadow = true;
+        player.add(dashboard);
+
+        // Pantalla de instrumentos detrás del volante
+        const clusterGeo = new THREE.PlaneGeometry(0.7, 0.28);
+        const clusterMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+        const cluster = new THREE.Mesh(clusterGeo, clusterMat);
+        cluster.position.set(-0.6, 0.95, -0.68);
+        cluster.rotation.x = -Math.PI / 7;
+        player.add(cluster);
+
+        // Espejo retrovisor central
+        const mirrorGeo = new THREE.BoxGeometry(0.5, 0.16, 0.06);
+        const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.8 });
+        const rearMirror = new THREE.Mesh(mirrorGeo, mirrorMat);
+        rearMirror.position.set(0, 1.45, -0.6);
+        player.add(rearMirror);
+
+        // Volante 3D deportivo
+        const wheelGroup = new THREE.Group();
+        const rimGeo = new THREE.TorusGeometry(0.28, 0.038, 16, 32);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+        const wheelRim = new THREE.Mesh(rimGeo, wheelMat);
+        wheelRim.castShadow = true;
+
+        const centerCap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16), wheelMat);
+        centerCap.rotation.x = Math.PI / 2;
+        const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.02), wheelMat);
+        wheelGroup.add(wheelRim, centerCap, spoke);
+
+        wheelGroup.position.set(-0.6, 0.92, -0.55);
+        wheelGroup.rotation.x = -Math.PI / 5;
+        player.add(wheelGroup);
+
+        // Luces interiores sutiles para iluminar el volante
+        const cabinLight = new THREE.PointLight(0x38bdf8, 0.7, 2.5);
+        cabinLight.position.set(-0.6, 1.5, -0.2);
+        player.add(cabinLight);
+
+        // Faros potentes del jugador proyectados hacia la carretera
+        const headlightL = new THREE.SpotLight(0xfffbeb, 4.0, 70, Math.PI / 4, 0.35, 1);
+        headlightL.position.set(-0.8, 0.65, -2.8);
+        headlightL.target.position.set(-0.8, 0, -45);
+        headlightL.castShadow = true;
+        player.add(headlightL);
+        player.add(headlightL.target);
+
+        const headlightR = new THREE.SpotLight(0xfffbeb, 4.0, 70, Math.PI / 4, 0.35, 1);
+        headlightR.position.set(0.8, 0.65, -2.8);
+        headlightR.target.position.set(0.8, 0, -45);
+        headlightR.castShadow = true;
+        player.add(headlightR);
+        player.add(headlightR.target);
+
+        // Posiciones de cámara
+        function updateCameraPosition() {
+            if (cameraMode === 'fpv') {
+                camera.position.set(-0.6, 1.25, -0.05); // Ojos del conductor
+                camera.rotation.set(0, 0, 0);
+            } else {
+                camera.position.set(0, 3.2, 5.5); // Vista trasera tipo persecución
+                camera.lookAt(player.position.x, 1, player.position.z - 15);
+            }
+        }
+        updateCameraPosition();
+
+        function toggleCameraView() {
+            cameraMode = (cameraMode === 'fpv') ? 'tpv' : 'fpv';
+            elCamLabel.innerText = (cameraMode === 'fpv') ? 'Cámara: 1ra Persona' : 'Cámara: 3ra Persona';
+            updateCameraPosition();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'c' || e.key === 'C') toggleCameraView();
+        });
+
+        // ============================================================
+        // MODELADO DE OBSTÁCULOS: AUTOS DETALLADOS Y PEATONES
+        // ============================================================
+        const obstacles = [];
+        const trafficColors = [0xdc2626, 0xf59e0b, 0x10b981, 0x8b5cf6, 0xf8fafc, 0x334155];
+
+        function createTrafficCar(colorHex) {
+            const car = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.5, roughness: 0.3 });
+            const windowMat = new THREE.MeshPhysicalMaterial({ color: 0x020617, roughness: 0.1, transmission: 0.6 });
+
+            // Chasis
+            const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.65, 4.2), bodyMat);
+            chassis.position.y = 0.55;
+            chassis.castShadow = true;
+            chassis.receiveShadow = true;
+            car.add(chassis);
+
+            // Techo / Cabina
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2.3), windowMat);
+            cabin.position.set(0, 1.15, -0.15);
+            cabin.castShadow = true;
+            car.add(cabin);
+
+            // Faros traseros brillantes
+            const tailGeo = new THREE.BoxGeometry(0.4, 0.18, 0.1);
+            const tailMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 2.5 });
+            const tailL = new THREE.Mesh(tailGeo, tailMat);
+            tailL.position.set(-0.75, 0.65, 2.1);
+            const tailR = new THREE.Mesh(tailGeo, tailMat);
+            tailR.position.set(0.75, 0.65, 2.1);
+            car.add(tailL, tailR);
+
+            // Faros delanteros
+            const headGeo = new THREE.BoxGeometry(0.4, 0.18, 0.1);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xfffbeb, emissive: 0xfffbeb, emissiveIntensity: 2.0 });
+            const headL = new THREE.Mesh(headGeo, headMat);
+            headL.position.set(-0.75, 0.65, -2.1);
+            const headR = new THREE.Mesh(headGeo, headMat);
+            headR.position.set(0.75, 0.65, -2.1);
+            car.add(headL, headR);
+
+            // 4 Ruedas
+            const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 14);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+            const wheelPositions = [[-1.05, 0.38, -1.3], [1.05, 0.38, -1.3], [-1.05, 0.38, 1.3], [1.05, 0.38, 1.3]];
+            wheelPositions.forEach(pos => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(pos[0], pos[1], pos[2]);
+                w.castShadow = true;
+                car.add(w);
+            });
+
+            car.userData = { type: 'car' };
             return car;
         }
 
-        // Crear Vehículo del Jugador (Deportivo Azul)
-        const player = createCar({ color: 0x2563eb, isPlayer: true, type: 'sedan' });
-        player.position.set(0, 0, 0);
-        scene.add(player);
+        function createPedestrian() {
+            const group = new THREE.Group();
+            
+            // Cuerpo con chaleco reflectante (alta visibilidad nocturna)
+            const bodyGeo = new THREE.CylinderGeometry(0.28, 0.28, 1.1, 10);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xeab308, emissive: 0x854d0e, emissiveIntensity: 1.2 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1.05;
+            body.castShadow = true;
 
-        // Paleta de colores para tráfico
-        const trafficColors = [
-            0xef4444, // Rojo
-            0xf59e0b, // Ámbar / Naranja
-            0x10b981, // Verde esmeralda
-            0x8b5cf6, // Violeta
-            0xe2e8f0, // Blanco perla
-            0x334155, // Gris oscuro metálico
-            0xd97706  // Mostaza
-        ];
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), new THREE.MeshStandardMaterial({ color: 0xfcd34d }));
+            head.position.y = 1.8;
+            head.castShadow = true;
 
-        // Grupo de obstáculos
-        const obstacles = [];
-        const vehicleTypes = ['sedan', 'suv', 'sedan'];
+            const legGeo = new THREE.BoxGeometry(0.2, 0.55, 0.2);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            const legL = new THREE.Mesh(legGeo, legMat);
+            legL.position.set(-0.12, 0.28, 0);
+            const legR = new THREE.Mesh(legGeo, legMat);
+            legR.position.set(0.12, 0.28, 0);
+            legL.castShadow = true;
+            legR.castShadow = true;
+
+            group.add(body, head, legL, legR);
+            group.userData = { type: 'pedestrian', speedX: 0, legs: [legL, legR] };
+            return group;
+        }
 
         function spawnObstacle() {
-            const randomColor = trafficColors[Math.floor(Math.random() * trafficColors.length)];
-            const randomType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
-            const obs = createCar({ color: randomColor, isPlayer: false, type: randomType });
-            
-            obs.position.z = -80 - (Math.random() * 40);
-            const lanes = [-3.5, 0, 3.5];
-            obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+            if (gameState !== 'playing') return;
+            const isPedestrian = Math.random() > 0.65; // Probabilidad de peatón cruzando
+
+            let obs;
+            if (isPedestrian) {
+                obs = createPedestrian();
+                const startLeft = Math.random() > 0.5;
+                obs.position.set(startLeft ? -9 : 9, 0, -110 - Math.random() * 20);
+                obs.userData.speedX = startLeft ? 0.055 : -0.055;
+            } else {
+                const color = trafficColors[Math.floor(Math.random() * trafficColors.length)];
+                obs = createTrafficCar(color);
+                const lanes = [-4.0, 0, 4.0];
+                const laneX = lanes[Math.floor(Math.random() * lanes.length)];
+                obs.position.set(laneX, 0, -110 - Math.random() * 30);
+                
+                // Si va en el carril izquierdo, viene de frente (tráfico contrario)
+                if (laneX === -4.0) {
+                    obs.rotation.y = Math.PI;
+                }
+            }
+
             scene.add(obs);
             obstacles.push(obs);
         }
 
-        // Crear 4 obstáculos iniciales
-        for (let i = 0; i < 4; i++) {
-            setTimeout(spawnObstacle, i * 600);
-        }
-
-        // Controles y movimiento
+        // ============================================================
+        // CONTROLES Y ENTRADA DE USUARIO
+        // ============================================================
         let targetX = 0;
         let isLeftDown = false;
         let isRightDown = false;
+        let distractionInterval;
+        let isDistractionActive = false;
 
-        // Eventos Teclado
         window.addEventListener('keydown', (e) => {
-            if (gameState !== 'playing') return;
-            if (e.key === 'ArrowLeft' || e.key === 'a') isLeftDown = true;
-            if (e.key === 'ArrowRight' || e.key === 'd') isRightDown = true;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftDown = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightDown = true;
         });
         window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a') isLeftDown = false;
-            if (e.key === 'ArrowRight' || e.key === 'd') isRightDown = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isLeftDown = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isRightDown = false;
         });
 
-        // Eventos Táctiles Móvil
+        // Controles táctiles
         const tLeft = document.getElementById('touch-left');
         const tRight = document.getElementById('touch-right');
-
-        tLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') isLeftDown = true; });
+        tLeft.addEventListener('touchstart', (e) => { e.preventDefault(); isLeftDown = true; });
         tLeft.addEventListener('touchend', (e) => { e.preventDefault(); isLeftDown = false; });
-
-        tRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameState === 'playing') isRightDown = true; });
+        tRight.addEventListener('touchstart', (e) => { e.preventDefault(); isRightDown = true; });
         tRight.addEventListener('touchend', (e) => { e.preventDefault(); isRightDown = false; });
 
-        function startGame(mode) {
+        // ============================================================
+        // FLUJO DE JUEGO (GAME LOOP)
+        // ============================================================
+        async function startGame(mode) {
+            await initAudio();
+
             currentMode = mode;
             gameState = 'playing';
             score = 0;
             targetX = 0;
-            player.position.x = 0;
-            player.rotation.set(0, 0, 0);
-            speed = 0.8;
-            isDistractionActive = false;
+            speedMultiplier = 0.6;
 
-            // Ocultar menús, mostrar HUD
-            elMainMenu.classList.add('hidden');
+            // Reset posición del jugador
+            player.position.set(0, 0, 0);
+            player.rotation.set(0, 0, 0);
+            wheelGroup.rotation.z = 0;
+            updateCameraPosition();
+
+            // Limpiar obstáculos anteriores
+            obstacles.forEach(o => scene.remove(o));
+            obstacles.length = 0;
+
+            // Ocultar menú y mostrar HUD
+            elMainMenu.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => elMainMenu.classList.add('hidden'), 300);
             elGameOver.classList.add('hidden');
             elHud.classList.remove('opacity-0');
-            tLeft.classList.remove('hidden');
-            tRight.classList.remove('hidden');
+            elCamToggle.classList.remove('hidden');
 
-            // Resetear obstáculos
-            obstacles.forEach(obs => {
-                obs.position.z = -40 - (Math.random() * 60);
-                const lanes = [-3.5, 0, 3.5];
-                obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
-            });
-
-            // Aplicar efectos según el modo
-            elCanvas.className = ''; // reset classes
+            elCanvas.className = '';
             clearInterval(distractionInterval);
             elDistraction.classList.add('hidden');
+            isDistractionActive = false;
 
+            if (engineNoise) {
+                engineNoise.volume.rampTo(-12, 1);
+            }
+
+            // Configurar según modo
             if (mode === 'normal') {
-                elStatus.innerText = 'Normal';
-                elStatus.className = 'font-bold text-blue-400';
-                scene.fog.color.setHex(0x111111);
-                renderer.setClearColor(0x111111);
-            }
-            else if (mode === 'drunk') {
-                elStatus.innerText = 'Ebrio';
-                elStatus.className = 'font-bold text-purple-400 animate-pulse';
-                // El canvas se vuelve borroso y oscilante
+                elStatus.innerText = '100% Lúcido';
+                elStatus.className = 'font-bold text-sky-400 text-base sm:text-lg uppercase tracking-wider';
+                elStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse';
+                scene.fog.color.setHex(0x060914);
+                renderer.setClearColor(0x060914);
+            } else if (mode === 'drunk') {
+                elStatus.innerText = 'Intoxicado (Alcohol)';
+                elStatus.className = 'font-bold text-purple-400 text-base sm:text-lg uppercase tracking-wider animate-pulse';
+                elStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping';
                 elCanvas.classList.add('drunk-effect');
-                // La niebla se vuelve ligeramente morada desorientadora
-                scene.fog.color.setHex(0x2a113a);
-                renderer.setClearColor(0x2a113a);
+                scene.fog.color.setHex(0x1a0628);
+                renderer.setClearColor(0x1a0628);
+                if (engineFilter) engineFilter.frequency.value = 160;
+            } else if (mode === 'distracted') {
+                elStatus.innerText = 'Distraído (Celular)';
+                elStatus.className = 'font-bold text-amber-400 text-base sm:text-lg uppercase tracking-wider';
+                elStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping';
+                distractionInterval = setInterval(triggerDistraction, 4500 + Math.random() * 2500);
             }
-            else if (mode === 'distracted') {
-                elStatus.innerText = 'Distraído';
-                elStatus.className = 'font-bold text-orange-400';
-                // Iniciar el pop-up invasivo del celular
-                distractionInterval = setInterval(triggerDistraction, 4000);
-            }
+
+            // Generar primer obstáculo
+            setTimeout(spawnObstacle, 800);
+            setTimeout(spawnObstacle, 2200);
         }
 
         function triggerDistraction() {
             if (gameState !== 'playing') return;
             isDistractionActive = true;
             elDistraction.classList.remove('hidden');
-            // Al estar distraído, forzamos un leve desvío involuntario
-            targetX += (Math.random() > 0.5 ? 1 : -1) * 1.5;
+
+            if (notificationSynth) {
+                notificationSynth.triggerAttackRelease(["E5", "B5"], [0.1, 0.1], undefined, 0.5);
+                setTimeout(() => notificationSynth.triggerAttackRelease(["G5", "E5"], [0.1, 0.1]), 120);
+            }
+
+            // Desvío involuntario por mirar la pantalla
+            targetX += (Math.random() > 0.5 ? 1 : -1) * 3.2;
         }
 
         function dismissDistraction() {
@@ -596,154 +856,200 @@
             elDistraction.classList.add('hidden');
         }
 
-        function triggerGameOver() {
-            gameState = 'gameover';
-            elHud.classList.add('opacity-0');
-            tLeft.classList.add('hidden');
-            tRight.classList.add('hidden');
+        function triggerGameOver(obstacleType) {
+            gameState = 'crashing';
             clearInterval(distractionInterval);
             elDistraction.classList.add('hidden');
-            elCanvas.className = ''; // Quitar filtros
+            elHud.classList.add('opacity-0');
+            elCamToggle.classList.add('hidden');
 
-            document.getElementById('final-score').innerText = Math.floor(score);
+            // Sonido de choque
+            if (engineNoise) engineNoise.volume.rampTo(-Infinity, 0.1);
+            if (skidSynth) skidSynth.triggerAttackRelease("4n");
+            setTimeout(() => { if (crashSynth) crashSynth.triggerAttackRelease("1n"); }, 180);
 
-            // Asignar mensaje reflexivo (Core de la ONG Educleta)
-            if (currentMode === 'normal') {
-                elMessage.innerText = "Incluso en condiciones normales, la vía exige tu 100% de atención. Imagina si le sumas alcohol o celular.";
-            } else if (currentMode === 'drunk') {
-                elMessage.innerHTML = "<strong class='text-purple-300'>Sensación de lentitud:</strong> Tus reflejos estaban alterados. El alcohol retrasa el tiempo que tarda tu cerebro en enviar la señal a tus manos para esquivar. Un segundo de retraso a 60km/h es fatal.";
-            } else if (currentMode === 'distracted') {
-                elMessage.innerHTML = "<strong class='text-orange-300'>Ceguera inatencional:</strong> Mirar la pantalla por 2 segundos a 60 km/h equivale a conducir 33 metros con los ojos vendados. El choque era inminente.";
+            // Cálculos pedagógicos de impacto
+            let currentKmh = 60 + Math.floor(speedMultiplier * 55);
+            let reactionSeconds = currentMode === 'drunk' ? "2.6s (Retardo)" : (currentMode === 'distracted' ? "3.2s (Ceguera)" : "0.9s (Alerta)");
+            let brakingMeters = Math.floor((currentKmh * 0.278) * (currentMode === 'normal' ? 1.2 : 2.8)) + " metros";
+
+            elStats.innerHTML = `
+                <div class="bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                    <span class="block text-red-400 font-black text-2xl font-mono">${currentKmh}</span>
+                    <span class="text-slate-400 text-xs uppercase font-bold">KM/H Impacto</span>
+                </div>
+                <div class="bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                    <span class="block text-amber-400 font-black text-2xl font-mono">${reactionSeconds.split(' ')[0]}</span>
+                    <span class="text-slate-400 text-xs uppercase font-bold">T. Reacción</span>
+                </div>
+                <div class="bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                    <span class="block text-sky-400 font-black text-2xl font-mono">${brakingMeters}</span>
+                    <span class="text-slate-400 text-xs uppercase font-bold">Distancia Frenado</span>
+                </div>
+            `;
+
+            if (obstacleType === 'pedestrian') {
+                elMessage.innerHTML = currentMode === 'drunk' ?
+                    "<strong class='text-purple-300 font-bold'>Retardo por alcohol:</strong> Tu visión en túnel y tus reflejos disminuidos te impidieron esquivar al peatón a tiempo. A más de 50 km/h el atropello es casi 100% mortal." :
+                    (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Ceguera inatencional:</strong> Mirar una notificación por 3 segundos a 80 km/h equivale a avanzar 66 metros completamente a ciegas. Arrollaste a un peatón sin frenar." : "<strong class='text-blue-300 font-bold'>Precaución vial:</strong> Aún con atención total, los imprevistos en cruces peatonales exigen velocidad moderada y prudencia.");
+            } else {
+                elMessage.innerHTML = currentMode === 'drunk' ?
+                    "<strong class='text-purple-300 font-bold'>Falla neuromuscular:</strong> El alcohol genera una ilusión de control, pero tus manos tardaron valiosos segundos en responder. El choque frontal desató fuerzas G destructivas." :
+                    (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
             }
 
-            // Destello rojo de choque
+            // Destello rojo en pantalla
+            elCanvas.className = '';
             const flash = document.createElement('div');
-            flash.style.position = 'absolute';
-            flash.style.inset = '0';
-            flash.style.backgroundColor = 'red';
-            flash.style.zIndex = '999';
-            flash.style.opacity = '1';
-            flash.style.transition = 'opacity 0.5s';
-            flash.style.pointerEvents = 'none';
+            flash.className = 'absolute inset-0 bg-red-600 z-[99] pointer-events-none opacity-90 transition-opacity duration-1000';
             document.body.appendChild(flash);
 
             setTimeout(() => {
                 flash.style.opacity = '0';
                 elGameOver.classList.remove('hidden');
-                setTimeout(() => flash.remove(), 500);
-            }, 50);
+                setTimeout(() => flash.remove(), 1000);
+            }, 1200);
         }
 
         function resetGame() {
             elGameOver.classList.add('hidden');
             elMainMenu.classList.remove('hidden');
-
-            // Reset cámara
-            camera.position.x = 0;
-            camera.rotation.z = 0;
+            elMainMenu.classList.remove('opacity-0', 'pointer-events-none');
+            updateCameraPosition();
             player.position.set(0, 0, 0);
             player.rotation.set(0, 0, 0);
         }
 
+        // ============================================================
+        // ANIMACIÓN Y RENDER LOOP
+        // ============================================================
         function animate() {
             requestAnimationFrame(animate);
 
             if (gameState === 'playing') {
-                // Actualizar Puntuación
-                score += speed * 0.5;
-                elScore.innerText = Math.floor(score);
+                speedMultiplier += 0.00015;
+                speedMultiplier = Math.min(speedMultiplier, 1.4);
 
-                // Aumentar velocidad progresivamente
-                speed += 0.0005;
+                score += speedMultiplier * 0.012;
+                elScore.innerText = score.toFixed(1) + " km";
 
-                // Lógica de Movimiento Deseado
-                if (isLeftDown) targetX -= 0.15;
-                if (isRightDown) targetX += 0.15;
+                let displaySpeed = 60 + Math.floor(speedMultiplier * 55);
+                elSpeed.innerText = displaySpeed;
+                elRpmBar.style.width = `${((speedMultiplier - 0.6) / 0.8) * 100}%`;
 
-                // Limitar movimiento a los carriles
-                targetX = Math.max(-4, Math.min(4, targetX));
+                if (engineFilter) {
+                    engineFilter.frequency.value = 220 + (speedMultiplier * 900);
+                }
+
+                // Control de dirección
+                if (isLeftDown) targetX -= 0.19;
+                if (isRightDown) targetX += 0.19;
+                targetX = Math.max(-5.2, Math.min(5.2, targetX));
 
                 let prevX = player.position.x;
 
-                // APLICACIÓN DE LA DISONANCIA COGNITIVA (Latencia y Pérdida de Control)
+                // Dinámica de reflejos según modo
                 if (currentMode === 'drunk') {
-                    // LAG DE INPUT: La interpolación es lentísima, simulando reflejos torpes
+                    // Latencia torpe
                     player.position.x += (targetX - player.position.x) * 0.02;
-                    // BALANCEO: El auto se desvía solo como si no hubiera control fino
-                    player.position.x += Math.sin(Date.now() * 0.003) * 0.03;
+                    // Balanceo involuntario
+                    player.position.x += Math.sin(Date.now() * 0.002) * 0.08;
 
-                    // La cámara también se marea
-                    camera.position.x = player.position.x * 0.5 + Math.sin(Date.now() * 0.001) * 0.5;
-                    camera.rotation.z = Math.sin(Date.now() * 0.002) * 0.05;
-                } else {
-                    // CONDUCCIÓN NORMAL: Respuesta rápida e interpolación fina
-                    player.position.x += (targetX - player.position.x) * 0.2;
-                    camera.position.x = player.position.x * 0.5;
-                    camera.rotation.z = 0;
-                }
-
-                // Inclinación suave del auto al doblar (Roll y Yaw dinámico)
-                const deltaX = player.position.x - prevX;
-                player.rotation.z = -deltaX * 0.7; // Balanceo
-                player.rotation.y = -deltaX * 0.5; // Giro sutil
-
-                // Rotar ruedas del jugador
-                if (player.userData && player.userData.wheels) {
-                    player.userData.wheels.forEach(w => {
-                        w.rotation.x -= speed * 0.6;
-                    });
-                }
-
-                // Animar líneas del suelo
-                lines.forEach(line => {
-                    line.position.z += speed;
-                    if (line.position.z > 8) {
-                        line.position.z = -100;
+                    // Desorientación en cámara
+                    if (cameraMode === 'fpv') {
+                        camera.rotation.z = Math.sin(Date.now() * 0.0015) * 0.08;
+                        camera.position.x = -0.6 + Math.sin(Date.now() * 0.002) * 0.12;
                     }
-                });
+                } else {
+                    // Respuesta ágil
+                    player.position.x += (targetX - player.position.x) * 0.14;
+                    if (cameraMode === 'fpv') {
+                        camera.rotation.z = (player.position.x - targetX) * 0.03;
+                        camera.position.x = -0.6;
+                    }
+                }
 
-                // Animar y chequear obstáculos
-                obstacles.forEach(obs => {
-                    obs.position.z += speed * 0.75; // Los autos de adelante se mueven a velocidad de tráfico
+                // Giro dinámico del volante y carrocería
+                const steerAngle = (player.position.x - targetX) * 0.7;
+                wheelGroup.rotation.z = steerAngle;
+                player.rotation.z = steerAngle * 0.06;
+                player.rotation.y = steerAngle * 0.04;
 
-                    // Rotar ruedas de los autos en tráfico
-                    if (obs.userData && obs.userData.wheels) {
-                        obs.userData.wheels.forEach(w => {
-                            w.rotation.x -= speed * 0.45;
+                // Animar ciudad y semáforos
+                roadChunks.forEach(chunk => {
+                    chunk.position.z += speedMultiplier * 1.6;
+
+                    if (chunk.userData.type === 'intersection') {
+                        const time = Date.now() * 0.001;
+                        const cycle = (time + chunk.position.z * 0.05) % 12;
+                        let state = (cycle > 6 && cycle <= 8) ? 1 : ((cycle > 8) ? 2 : 0);
+
+                        chunk.userData.trafficLights.forEach(tl => {
+                            const ud = tl.userData;
+                            ud.r.material.emissive.setHex(state === 2 ? 0xff0000 : 0x000000);
+                            ud.r.material.emissiveIntensity = state === 2 ? 2.5 : 0;
+                            ud.y.material.emissive.setHex(state === 1 ? 0xffbb00 : 0x000000);
+                            ud.y.material.emissiveIntensity = state === 1 ? 2.5 : 0;
+                            ud.g.material.emissive.setHex(state === 0 ? 0x00ff00 : 0x000000);
+                            ud.g.material.emissiveIntensity = state === 0 ? 2.5 : 0;
                         });
                     }
 
-                    // Colisión Bounding Box ajustada a la carrocería del auto
-                    const distX = Math.abs(player.position.x - obs.position.x);
-                    const distZ = Math.abs(player.position.z - obs.position.z);
-
-                    if (distX < 1.7 && distZ < 3.4) {
-                        triggerGameOver();
-                    }
-
-                    // Reciclar obstáculos que pasaron
-                    if (obs.position.z > 8) {
-                        obs.position.z = -65 - (Math.random() * 45);
-                        const lanes = [-3.5, 0, 3.5];
-                        obs.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+                    // Reciclar bloques de pista
+                    if (chunk.position.z > chunkLength) {
+                        chunk.position.z -= roadChunks.length * chunkLength;
                     }
                 });
+
+                // Animar obstáculos
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    let obs = obstacles[i];
+
+                    if (obs.userData.type === 'pedestrian') {
+                        obs.position.x += obs.userData.speedX;
+                        obs.position.z += speedMultiplier * 0.9;
+                        // Animación de caminata de piernas
+                        obs.userData.legs[0].rotation.x = Math.sin(Date.now() * 0.012) * 0.6;
+                        obs.userData.legs[1].rotation.x = -Math.sin(Date.now() * 0.012) * 0.6;
+                    } else {
+                        let relSpeed = (obs.position.x < -2) ? speedMultiplier * 2.2 : speedMultiplier * 0.7;
+                        obs.position.z += relSpeed;
+                    }
+
+                    // Detección de colisión precisa
+                    const distZ = Math.abs(obs.position.z - player.position.z);
+                    const distX = Math.abs(obs.position.x - player.position.x);
+                    const widthLimit = obs.userData.type === 'pedestrian' ? 1.6 : 2.4;
+
+                    if (distZ < 2.8 && distX < widthLimit && obs.position.z < 1.0) {
+                        triggerGameOver(obs.userData.type);
+                    }
+
+                    // Reciclar obstáculos pasados
+                    if (obs.position.z > 12) {
+                        scene.remove(obs);
+                        obstacles.splice(i, 1);
+                        spawnObstacle();
+                    }
+                }
+            } else if (gameState === 'crashing') {
+                // Cinemática violenta de impacto en primera persona
+                camera.position.z -= 0.5;
+                camera.position.y -= 0.04;
+                camera.rotation.x -= 0.08;
+                camera.rotation.z += (Math.random() - 0.5) * 0.25;
             }
 
             renderer.render(scene, camera);
         }
 
-        // Manejo de redimensionamiento de ventana
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Iniciar el bucle 3D
-        window.onload = function () {
-            animate();
-        }
+        window.onload = () => animate();
     </script>
 </body>
 
