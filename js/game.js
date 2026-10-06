@@ -59,15 +59,17 @@ scene.add(xrCameraRig);
 // Controladores Touch y Rayos Láser Visibles (Manos en VR)
 const controller1 = renderer.xr.getController(0);
 const controller2 = renderer.xr.getController(1);
+const controllerGrip1 = renderer.xr.getControllerGrip(0);
+const controllerGrip2 = renderer.xr.getControllerGrip(1);
 
 function createControllerPointer() {
     const rayGroup = new THREE.Group();
-    // Línea láser brillante
-    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -3.5)]);
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3 });
+    // Línea láser brillante de 4 metros
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4.0)]);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3, transparent: true, opacity: 0.85 });
     const rayLine = new THREE.Line(lineGeo, lineMat);
     // Esfera emisiva en la punta de la mano
-    const handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    const handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     rayGroup.add(rayLine, handGlow);
     return rayGroup;
 }
@@ -76,6 +78,20 @@ controller1.add(createControllerPointer());
 controller2.add(createControllerPointer());
 xrCameraRig.add(controller1);
 xrCameraRig.add(controller2);
+xrCameraRig.add(controllerGrip1);
+xrCameraRig.add(controllerGrip2);
+
+// Raycaster para interactuar apuntando directamente al menú 3D
+const vrRaycaster = new THREE.Raycaster();
+const vrTempMatrix = new THREE.Matrix4();
+
+// Punto luminoso de impacto del láser sobre el panel del menú
+const vrHitMarker = new THREE.Mesh(
+    new THREE.RingGeometry(0.02, 0.045, 24),
+    new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, depthTest: false })
+);
+vrHitMarker.visible = false;
+scene.add(vrHitMarker);
 
 // Menú 3D Flotante de inicio / selección de modo en VR (ubicado dentro de la cabina)
 const vrMenuPanel = createVRMenuPanel();
@@ -302,6 +318,7 @@ function showVRMenu() {
     isDownDown = false;
     if (player) player.visible = false; // Ocultar auto para no obstruir el menú en VR
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
+    if (vrHitMarker) vrHitMarker.visible = false;
     if (vrMenuPanel) {
         vrMenuPanel.position.set(0, 1.3, -1.4);
         vrMenuPanel.visible = true;
@@ -527,10 +544,57 @@ function animate() {
                 }
             }
 
-            // Manejo de Menú en VR
+            // Manejo de Menú en VR (Raycasting con Puntero Láser y Joystick)
             if (gameState === 'menu') {
                 const now = Date.now();
-                if (now - vrStickDebounce > 260) {
+                let rayPointedIdx = -1;
+
+                // Raycast desde los mandos hacia el panel del menú 3D
+                if (vrMenuPanel && vrMenuPanel.visible) {
+                    let hitFound = false;
+                    const controllers = [controller1, controller2];
+
+                    for (const ctrl of controllers) {
+                        vrTempMatrix.identity().extractRotation(ctrl.matrixWorld);
+                        const origin = new THREE.Vector3().setFromMatrixPosition(ctrl.matrixWorld);
+                        const dir = new THREE.Vector3(0, 0, -1).applyMatrix4(vrTempMatrix).normalize();
+                        
+                        vrRaycaster.set(origin, dir);
+                        const intersects = vrRaycaster.intersectObject(vrMenuPanel);
+
+                        if (intersects.length > 0) {
+                            const hit = intersects[0];
+                            // Posicionar el punto luminoso azul en la superficie del menú
+                            vrHitMarker.position.copy(hit.point);
+                            vrHitMarker.position.z += 0.005; // Leve offset frontal para evitar z-fighting
+                            vrHitMarker.quaternion.copy(vrMenuPanel.quaternion);
+                            vrHitMarker.visible = true;
+                            hitFound = true;
+
+                            // Mapear coordenada UV de impacto a las 4 opciones
+                            if (hit.uv) {
+                                const uvY = hit.uv.y; // 1.0 (arriba) a 0.0 (abajo)
+                                // Opciones distribuidas en el tercio central
+                                if (uvY > 0.62 && uvY <= 0.82) rayPointedIdx = 0;
+                                else if (uvY > 0.48 && uvY <= 0.62) rayPointedIdx = 1;
+                                else if (uvY > 0.35 && uvY <= 0.48) rayPointedIdx = 2;
+                                else if (uvY > 0.21 && uvY <= 0.35) rayPointedIdx = 3;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (!hitFound) {
+                        vrHitMarker.visible = false;
+                    }
+                }
+
+                // Si el puntero láser apunta a un botón, seleccionarlo visualmente de inmediato
+                if (rayPointedIdx !== -1 && rayPointedIdx !== vrSelectedModeIdx) {
+                    vrSelectedModeIdx = rayPointedIdx;
+                    vrMenuPanel.userData.render(vrSelectedModeIdx);
+                } else if (now - vrStickDebounce > 260) {
+                    // Navegación con palanca física
                     if (stickYInput > 0.3) {
                         vrSelectedModeIdx = Math.min(3, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
@@ -545,7 +609,6 @@ function animate() {
                 // Iniciar juego o alternar volumen con Gatillo o Botón A/X
                 if (triggerPressed || buttonPrimary) {
                     if (vrSelectedModeIdx === 3) {
-                        const now = Date.now();
                         if (now - vrStickDebounce > 280) {
                             // Alternar volumen en ciclos: 50% -> 75% -> 100% -> 25% -> 50%
                             let nextVol = currentVolume + 0.25;
@@ -556,6 +619,7 @@ function animate() {
                         }
                     } else {
                         const modes = ['normal', 'drunk', 'distracted'];
+                        vrHitMarker.visible = false;
                         startGame(modes[vrSelectedModeIdx]);
                     }
                 }

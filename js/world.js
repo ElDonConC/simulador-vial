@@ -244,11 +244,13 @@ function createVRGameOverPanel() {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 24px sans-serif';
         ctx.fillText('🎮 PRESIONA GATILLO O BOTÓN A', 256, 242);
+
+        if (texture) texture.needsUpdate = true;
     }
 
+    const texture = new THREE.CanvasTexture(canvas);
     update('¡IMPACTO FATAL!', 'Colisión de tránsito vehicular', 'T. Reacción anulado');
 
-    const texture = new THREE.CanvasTexture(canvas);
     const planeGeo = new THREE.PlaneGeometry(2.6, 1.5);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
@@ -262,6 +264,7 @@ function createVRMenuPanel() {
     canvas.width = 512;
     canvas.height = 420;
     const ctx = canvas.getContext('2d');
+    let texture = null;
 
     function render(selectedIdx) {
         ctx.fillStyle = 'rgba(10, 15, 30, 0.96)';
@@ -278,29 +281,42 @@ function createVRMenuPanel() {
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '14px sans-serif';
-        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para elegir o ajustar', 256, 66);
+        ctx.fillText('Apunta con el láser o mueve joystick ↑/↓', 256, 66);
 
         const currentVolPercent = Math.round(currentVolume * 100);
         const modes = [
             { title: '1. Conducción Atenta (Lúcido)', color: selectedIdx === 0 ? '#2563eb' : '#1e293b', text: '#ffffff' },
             { title: '2. Bajo Efectos del Alcohol 🍺', color: selectedIdx === 1 ? '#9333ea' : '#1e293b', text: '#ffffff' },
             { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' },
-            { title: `🔊 Volumen de Audio: ${currentVolPercent}% (Gatillo para cambiar)`, color: selectedIdx === 3 ? '#0284c7' : '#0f172a', text: '#38bdf8' }
+            { title: `🔊 Volumen de Audio: ${currentVolPercent}% (Pulsar para cambiar)`, color: selectedIdx === 3 ? '#0284c7' : '#0f172a', text: '#38bdf8' }
         ];
 
         modes.forEach((m, idx) => {
             const y = 84 + idx * 54;
-            ctx.fillStyle = m.color;
+            const isSel = (selectedIdx === idx);
+
+            // Fondo del botón
+            ctx.fillStyle = isSel ? m.color : '#1e293b';
             ctx.fillRect(30, y, 452, 46);
 
-            if (selectedIdx === idx) {
+            // Borde brillante e indicador de puntero si está seleccionado
+            if (isSel) {
                 ctx.strokeStyle = '#38bdf8';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 4;
                 ctx.strokeRect(30, y, 452, 46);
+
+                // Flecha / Puntero activo visual
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 22px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText('👉', 38, y + 31);
+                ctx.textAlign = 'right';
+                ctx.fillText('👈', 474, y + 31);
             }
 
-            ctx.fillStyle = m.text;
-            ctx.font = 'bold 16px sans-serif';
+            ctx.fillStyle = isSel ? '#ffffff' : '#94a3b8';
+            ctx.font = isSel ? 'bold 17px sans-serif' : '15px sans-serif';
+            ctx.textAlign = 'center';
             ctx.fillText(m.title, 256, y + 29);
         });
 
@@ -317,14 +333,16 @@ function createVRMenuPanel() {
 
         ctx.fillStyle = '#e2e8f0';
         ctx.font = '12px sans-serif';
-        ctx.fillText('• Joystick (Palanca): Girar auto | Arriba/Abajo en Menú', 256, 348);
+        ctx.fillText('• Apuntar y Gatillo: Seleccionar modo', 256, 348);
         ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 256, 368);
         ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 256, 386);
+
+        if (texture) texture.needsUpdate = true;
     }
 
+    texture = new THREE.CanvasTexture(canvas);
     render(0);
 
-    const texture = new THREE.CanvasTexture(canvas);
     const planeGeo = new THREE.PlaneGeometry(2.3, 1.9);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
