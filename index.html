@@ -50,6 +50,20 @@
             pointer-events: auto;
         }
 
+        .menu-hidden {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        .menu-visible {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+
         /* Efecto de embriaguez extremo: doble visión, desorientación cromática y ondulación */
         .drunk-effect {
             filter: blur(3.5px) contrast(1.35) hue-rotate(-25deg) saturate(2.2);
@@ -837,11 +851,11 @@
             obstacles.forEach(o => scene.remove(o));
             obstacles.length = 0;
 
-            // Ocultar menú principal inmediatamente
-            elMainMenu.style.display = 'none';
-            elMainMenu.classList.add('hidden', 'opacity-0', 'pointer-events-none');
-            elGameOver.style.display = 'none';
-            elGameOver.classList.add('hidden');
+            // Ocultar menú principal inmediatamente de forma estricta
+            elMainMenu.classList.add('menu-hidden');
+            elMainMenu.classList.remove('menu-visible');
+            elGameOver.classList.add('menu-hidden');
+            elGameOver.classList.remove('menu-visible');
             elHud.classList.remove('opacity-0');
             elCamToggle.classList.remove('hidden');
 
@@ -913,7 +927,7 @@
             setTimeout(() => { if (crashSynth) crashSynth.triggerAttackRelease("1n"); }, 180);
 
             // Cálculos pedagógicos de impacto
-            let currentKmh = 60 + Math.floor(speedMultiplier * 55);
+            let currentKmh = Math.floor(speedMultiplier * 90);
             let reactionSeconds = currentMode === 'drunk' ? "2.6s (Retardo)" : (currentMode === 'distracted' ? "3.2s (Ceguera)" : "0.9s (Alerta)");
             let brakingMeters = Math.floor((currentKmh * 0.278) * (currentMode === 'normal' ? 1.2 : 2.8)) + " metros";
 
@@ -950,17 +964,18 @@
 
             setTimeout(() => {
                 flash.style.opacity = '0';
-                elGameOver.style.display = 'flex';
+                elGameOver.classList.remove('menu-hidden');
                 elGameOver.classList.remove('hidden');
                 setTimeout(() => flash.remove(), 1000);
             }, 1200);
         }
 
         function resetGame() {
-            elGameOver.style.display = 'none';
+            elGameOver.classList.add('menu-hidden');
             elGameOver.classList.add('hidden');
-            elMainMenu.style.display = 'block';
+            elMainMenu.classList.remove('menu-hidden');
             elMainMenu.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            elMainMenu.classList.add('menu-visible');
             updateCameraPosition();
             player.position.set(0, 0, 0);
             player.rotation.set(0, 0, 0);
