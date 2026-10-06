@@ -436,18 +436,23 @@
         }
 
         // ============================================================
-        // THREE.JS SCENE & WEBXR SETUP (META QUEST VR)
+        // THREE.JS SCENE & WEBXR SETUP (META QUEST VR OPTIMIZADO)
         // ============================================================
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x060914, 0.014); // Niebla nocturna inmersiva
 
-        const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 250);
-        const renderer = new THREE.WebGLRenderer({ canvas: elCanvas, antialias: true, powerPreference: 'high-performance' });
+        const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas: elCanvas, 
+            antialias: true, 
+            powerPreference: 'high-performance',
+            precision: 'mediump'
+        });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Optimizado para pantallas Retina / 4K
         renderer.setClearColor(0x060914);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.shadowMap.type = THREE.BasicShadowMap; // Mucho más rápido en tasa de cuadros
 
         // Habilitar soporte WebXR para Meta Quest 2 / 3 / Pro
         renderer.xr.enabled = true;
@@ -484,10 +489,8 @@
 
         async function handleVRButtonClick() {
             if (hasVRSupport) {
-                // Si el usuario ya está dentro del Meta Quest Browser, inicia VR directo
                 toggleVRMode();
             } else {
-                // Si está en PC / Mac / Celular, muestra el código QR y la guía
                 toggleQuestModal(true);
             }
         }
@@ -508,7 +511,6 @@
                     isVRActive = true;
                     document.getElementById('vr-btn-label').innerText = 'Salir de VR';
                     
-                    // Iniciar automáticamente en modo FPV atento si estaba en menú
                     if (gameState === 'menu') {
                         startGame('normal');
                     }
@@ -527,12 +529,12 @@
             }
         }
 
-        // Iluminación global
-        const ambientLight = new THREE.AmbientLight(0x334155, 0.6);
+        // Iluminación global optimizada
+        const ambientLight = new THREE.AmbientLight(0x475569, 0.8);
         scene.add(ambientLight);
 
-        const moonLight = new THREE.DirectionalLight(0x93c5fd, 1.0);
-        moonLight.position.set(-25, 45, -20);
+        const moonLight = new THREE.DirectionalLight(0x93c5fd, 0.9);
+        moonLight.position.set(-25, 40, -20);
         moonLight.castShadow = true;
         moonLight.shadow.mapSize.width = 1024;
         moonLight.shadow.mapSize.height = 1024;
@@ -542,29 +544,27 @@
         // GENERACIÓN PROCEDURAL DE CIUDAD Y CALLES
         // ============================================================
         const roadChunks = [];
-        const numChunks = 12;
+        const numChunks = 10;
         const chunkLength = 40;
 
         const roadMat = new THREE.MeshStandardMaterial({ color: 0x181a20, roughness: 0.85, metalness: 0.1 });
-        const zebraMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.5 });
+        const zebraMat = new THREE.MeshBasicMaterial({ color: 0xf1f5f9 });
         const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
-        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.9, metalness: 0.2 });
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x0b1120, roughness: 0.9, metalness: 0.1 });
 
         function createTrafficLight() {
             const group = new THREE.Group();
-            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7.5, 8), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7 }));
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7.5, 6), new THREE.MeshStandardMaterial({ color: 0x334155 }));
             pole.position.y = 3.75;
-            pole.castShadow = true;
 
-            const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.6 }));
+            const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x020617 }));
             box.position.set(0, 6.8, 0.2);
-            box.castShadow = true;
 
-            const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0x000000 }));
+            const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x330000 }));
             rLight.position.set(0, 7.5, 0.62);
-            const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0x000000 }));
+            const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x332200 }));
             yLight.position.set(0, 6.8, 0.62);
-            const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 12), new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x000000 }));
+            const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x003300 }));
             gLight.position.set(0, 6.1, 0.62);
 
             group.add(pole, box, rLight, yLight, gLight);
@@ -580,25 +580,20 @@
             
             const bMesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMat);
             bMesh.position.set(isLeft ? -19 - width / 2 : 19 + width / 2, height / 2, 0);
-            bMesh.castShadow = true;
-            bMesh.receiveShadow = true;
             group.add(bMesh);
 
-            // Ventanas iluminadas en el edificio
-            const winCount = 8;
+            // Ventanas iluminadas (ligeras)
             const winGeo = new THREE.PlaneGeometry(0.8, 1.2);
             const winMatOn = new THREE.MeshBasicMaterial({ color: 0xfde047 });
-            for (let w = 0; w < winCount; w++) {
-                if (Math.random() > 0.4) {
-                    const win = new THREE.Mesh(winGeo, winMatOn);
-                    win.position.set(
-                        isLeft ? -19 : 19,
-                        3 + Math.random() * (height - 6),
-                        (Math.random() - 0.5) * depth * 0.8
-                    );
-                    win.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
-                    group.add(win);
-                }
+            for (let w = 0; w < 5; w++) {
+                const win = new THREE.Mesh(winGeo, winMatOn);
+                win.position.set(
+                    isLeft ? -19 : 19,
+                    3 + Math.random() * (height - 6),
+                    (Math.random() - 0.5) * depth * 0.8
+                );
+                win.rotation.y = isLeft ? Math.PI / 2 : -Math.PI / 2;
+                group.add(win);
             }
             return group;
         }
@@ -616,13 +611,10 @@
             // Veredas laterales
             const swLeft = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
             swLeft.position.set(-13, 0.17, 0);
-            swLeft.receiveShadow = true;
             const swRight = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
             swRight.position.set(13, 0.17, 0);
-            swRight.receiveShadow = true;
             chunk.add(swLeft, swRight);
 
-            // Edificios en los lados para sensación urbana nocturna
             chunk.add(createBuilding(true));
             chunk.add(createBuilding(false));
 
@@ -632,7 +624,6 @@
                     const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 5.5), zebraMat);
                     stripe.rotation.x = -Math.PI / 2;
                     stripe.position.set(j * 1.8, 0.02, 0);
-                    stripe.receiveShadow = true;
                     chunk.add(stripe);
                 }
 
@@ -648,33 +639,27 @@
                 chunk.userData = { type: 'intersection', trafficLights: [tlLeft, tlRight] };
             } else {
                 // Líneas divisorias de carril
-                const lineL = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                const lineL = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), zebraMat);
                 lineL.rotation.x = -Math.PI / 2;
                 lineL.position.set(-3.5, 0.02, 0);
                 chunk.add(lineL);
 
-                const lineR = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                const lineR = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 10), zebraMat);
                 lineR.rotation.x = -Math.PI / 2;
                 lineR.position.set(3.5, 0.02, 0);
                 chunk.add(lineR);
 
                 // Farola de calle
-                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8.5, 8), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 }));
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8.5, 6), new THREE.MeshStandardMaterial({ color: 0x475569 }));
                 pole.position.set(-10.5, 4.25, 0);
-                pole.castShadow = true;
 
                 const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 0.15), new THREE.MeshStandardMaterial({ color: 0x475569 }));
                 arm.position.set(-9.5, 8.4, 0);
 
-                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffedd5 }));
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffedd5 }));
                 bulb.position.set(-8.5, 8.2, 0);
 
-                const streetLight = new THREE.SpotLight(0xffedd5, 1.8, 40, Math.PI / 3, 0.5, 1);
-                streetLight.position.set(-8.5, 8.2, 0);
-                streetLight.target.position.set(-4, 0, 0);
-                streetLight.castShadow = true;
-
-                chunk.add(pole, arm, bulb, streetLight, streetLight.target);
+                chunk.add(pole, arm, bulb);
                 chunk.userData = { type: 'straight' };
             }
 
