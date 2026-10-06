@@ -438,19 +438,19 @@
         // THREE.JS SCENE & WEBXR SETUP (ULTRA-FLUIDO & ALTA CLARIDAD)
         // ============================================================
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x0f172a, 40, 160); // Niebla lineal simple y clara
+        scene.fog = new THREE.Fog(0x0f172a, 80, 260); // Niebla muy lejana para horizonte infinito y nítido
 
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 350);
         const renderer = new THREE.WebGLRenderer({ 
             canvas: elCanvas, 
-            antialias: false, // Máximo rendimiento en tasa de cuadros
+            antialias: true,
             powerPreference: 'high-performance',
             precision: 'mediump'
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.setClearColor(0x0f172a);
-        renderer.shadowMap.enabled = false; // Desactivado para eliminar cálculo de mapas de sombra por frame
+        renderer.shadowMap.enabled = false;
 
         // Habilitar soporte WebXR para Meta Quest 2 / 3 / Pro
         renderer.xr.enabled = true;
@@ -685,7 +685,7 @@
         hood.rotation.x = 0.05;
         player.add(hood);
 
-        // 3. Cabina / Techo / Ventanas
+        // 3. Cabina / Techo / Ventanas (Solo visibles en 3ra persona o exteriores)
         const cabinGeo = new THREE.BoxGeometry(1.9, 0.65, 2.2);
         const cabin = new THREE.Mesh(cabinGeo, playerGlassMat);
         cabin.position.set(0, 1.25, 0.2);
@@ -1053,15 +1053,37 @@
             }, 1200);
         }
 
+        function updateCameraPosition() {
+            if (cameraMode === 'fpv') {
+                camera.position.set(player.position.x - 0.5, 1.4, player.position.z - 0.1);
+                camera.rotation.set(-0.02, 0, 0);
+                if (cabin) cabin.visible = false;
+                if (roof) roof.visible = false;
+            } else {
+                camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
+                camera.lookAt(player.position.x, 1.1, player.position.z - 15);
+                if (cabin) cabin.visible = true;
+                if (roof) roof.visible = true;
+            }
+        }
+
+        // Posición inicial de cámara con vista clara a la ciudad y coche
+        camera.position.set(0, 2.5, 7.0);
+        camera.lookAt(0, 1.0, -10);
+
         function resetGame() {
+            gameState = 'menu';
             elGameOver.classList.add('menu-hidden');
             elGameOver.classList.add('hidden');
             elMainMenu.classList.remove('menu-hidden');
             elMainMenu.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
             elMainMenu.classList.add('menu-visible');
-            updateCameraPosition();
             player.position.set(0, 0, 0);
             player.rotation.set(0, 0, 0);
+            camera.position.set(0, 2.5, 7.0);
+            camera.lookAt(0, 1.0, -10);
+            if (cabin) cabin.visible = true;
+            if (roof) roof.visible = true;
         }
 
         // ============================================================
@@ -1165,9 +1187,11 @@
                         }
                     }
                 } else if (cameraMode === 'fpv') {
-                    // Modo pantalla plana FPV (Ojos del conductor)
+                    // Modo pantalla plana FPV (Ojos del conductor hacia la calle)
+                    if (cabin) cabin.visible = false;
+                    if (roof) roof.visible = false;
                     const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.05 : 0;
-                    camera.position.set(player.position.x - 0.5 + headBob, 1.45, player.position.z + 0.3);
+                    camera.position.set(player.position.x - 0.5 + headBob, 1.45, player.position.z - 0.2);
                     camera.rotation.set(
                         -0.02,
                         (targetX - player.position.x) * 0.04,
@@ -1175,6 +1199,8 @@
                     );
                 } else {
                     // Modo pantalla plana 3ra persona detrás del auto
+                    if (cabin) cabin.visible = true;
+                    if (roof) roof.visible = true;
                     camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
                     camera.lookAt(player.position.x, 1.1, player.position.z - 15);
                 }
