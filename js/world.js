@@ -209,44 +209,106 @@ function createPedestrian() {
     return group;
 }
 
-// Panel Flotante 3D para Game Over / Menú dentro de Realidad Virtual (Meta Quest)
-function createVRPanel(title, subtitle, actionText) {
+// Panel Flotante 3D para Game Over dentro de VR
+function createVRGameOverPanel() {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
-    canvas.height = 256;
+    canvas.height = 300;
     const ctx = canvas.getContext('2d');
 
-    // Fondo panel
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-    ctx.roundRect ? ctx.roundRect(10, 10, 492, 236, 24) : ctx.fillRect(10, 10, 492, 236);
-    ctx.fill();
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 4;
-    ctx.stroke();
+    function update(title, desc, stats) {
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.95)';
+        ctx.fillRect(0, 0, 512, 300);
+        
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(6, 6, 500, 288);
 
-    // Textos
-    ctx.fillStyle = '#ef4444';
-    ctx.font = 'bold 36px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(title, 256, 75);
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 36px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(title, 256, 55);
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = '20px sans-serif';
-    ctx.fillText(subtitle, 256, 125);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '18px sans-serif';
+        ctx.fillText(desc, 256, 100);
+        if (stats) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 22px monospace';
+            ctx.fillText(stats, 256, 150);
+        }
 
-    // Botón / Instrucción
-    ctx.fillStyle = '#3b82f6';
-    ctx.roundRect ? ctx.roundRect(86, 160, 340, 56, 16) : ctx.fillRect(86, 160, 340, 56);
-    ctx.fill();
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(56, 200, 400, 65);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px sans-serif';
-    ctx.fillText(actionText, 256, 196);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('🎮 PRESIONA GATILLO O BOTÓN A', 256, 242);
+    }
+
+    update('¡IMPACTO FATAL!', 'Colisión de tránsito vehicular', 'T. Reacción anulado');
 
     const texture = new THREE.CanvasTexture(canvas);
-    const planeGeo = new THREE.PlaneGeometry(2.4, 1.2);
+    const planeGeo = new THREE.PlaneGeometry(2.6, 1.5);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.userData = { canvas, ctx, texture };
+    mesh.userData = { canvas, ctx, texture, update };
+    return mesh;
+}
+
+// Menú Flotante 3D para seleccionar modo en VR (Normal / Alcohol / Distraído)
+function createVRMenuPanel() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+
+    function render(selectedIdx) {
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.95)';
+        ctx.fillRect(0, 0, 512, 360);
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(6, 6, 500, 348);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('METAVERSO VIAL VR', 256, 48);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '16px sans-serif';
+        ctx.fillText('Mueve joystick ↑/↓ y pulsa Gatillo para empezar', 256, 80);
+
+        const modes = [
+            { title: '1. Conducción Atenta (100% Lúcido)', color: selectedIdx === 0 ? '#3b82f6' : '#1e293b', text: '#ffffff' },
+            { title: '2. Bajo Efectos del Alcohol 🍺', color: selectedIdx === 1 ? '#9333ea' : '#1e293b', text: '#ffffff' },
+            { title: '3. Conducción Distraída (Celular) 📱', color: selectedIdx === 2 ? '#d97706' : '#1e293b', text: '#ffffff' }
+        ];
+
+        modes.forEach((m, idx) => {
+            const y = 110 + idx * 75;
+            ctx.fillStyle = m.color;
+            ctx.fillRect(36, y, 440, 60);
+
+            if (selectedIdx === idx) {
+                ctx.strokeStyle = '#f8fafc';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(36, y, 440, 60);
+            }
+
+            ctx.fillStyle = m.text;
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText(m.title, 256, y + 38);
+        });
+    }
+
+    render(0);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const planeGeo = new THREE.PlaneGeometry(2.6, 1.8);
+    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };
     return mesh;
 }
