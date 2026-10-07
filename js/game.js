@@ -47,14 +47,31 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
-renderer.xr.enabled = true;
-let isVRActive = false;
-let vrSession = null;
+// Inicializar Vehículo del Jugador
+const playerVehicle = createPlayerVehicle();
+const player = playerVehicle.mesh;
+const cabin = playerVehicle.cabin;
+const roof = playerVehicle.roof;
+const wheelGroup = playerVehicle.wheelGroup;
+const playerWheels = playerVehicle.playerWheels;
+const tailMat = playerVehicle.tailMat;
+scene.add(player);
 
-// Rig de Cámara para sincronización de movimiento 6DOF en Realidad Virtual
+// Posición inicial de cámara en el menú (para navegador 2D)
+camera.position.set(0, 2.5, 7.0);
+camera.lookAt(0, 1.0, -10);
+
+// Menú 3D Flotante de inicio / selección de modo en VR
+const vrMenuPanel = createVRMenuPanel();
+vrMenuPanel.position.set(0, 1.25, -1.5);
+vrMenuPanel.visible = false;
+scene.add(vrMenuPanel);
+
+// Rig de Cámara para Realidad Virtual (Anclado directamente como HIJO del auto en el asiento del piloto)
 const xrCameraRig = new THREE.Group();
+xrCameraRig.position.set(-0.48, 1.28, 0.15); // Ubicado exactamente en la cabeza del conductor dentro del auto
 xrCameraRig.add(camera);
-scene.add(xrCameraRig);
+player.add(xrCameraRig); // ¡Al ser hijo de player, se mueve y gira automáticamente con el auto de forma 100% fija!
 
 // Controladores Touch y Rayos Láser Visibles (Manos en VR)
 const controller1 = renderer.xr.getController(0);
@@ -64,11 +81,9 @@ const controllerGrip2 = renderer.xr.getControllerGrip(1);
 
 function createControllerPointer() {
     const rayGroup = new THREE.Group();
-    // Línea láser brillante de 4 metros
     const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4.0)]);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3, transparent: true, opacity: 0.85 });
     const rayLine = new THREE.Line(lineGeo, lineMat);
-    // Esfera emisiva en la punta de la mano
     const handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     rayGroup.add(rayLine, handGlow);
     return rayGroup;
@@ -85,7 +100,6 @@ xrCameraRig.add(controllerGrip2);
 const vrRaycaster = new THREE.Raycaster();
 const vrTempMatrix = new THREE.Matrix4();
 
-// Punto luminoso de impacto del láser sobre el panel del menú
 const vrHitMarker = new THREE.Mesh(
     new THREE.RingGeometry(0.02, 0.045, 24),
     new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, depthTest: false })
@@ -93,30 +107,23 @@ const vrHitMarker = new THREE.Mesh(
 vrHitMarker.visible = false;
 scene.add(vrHitMarker);
 
-// Menú 3D Flotante de inicio / selección de modo en VR (ubicado dentro de la cabina)
-const vrMenuPanel = createVRMenuPanel();
-vrMenuPanel.position.set(0, 1.25, -1.5);
-vrMenuPanel.visible = false;
-scene.add(vrMenuPanel);
-
-// Panel 3D Flotante de Game Over dentro de VR (anclado directamente al visor XR, a la altura perfecta de los ojos)
+// Panel 3D Flotante de Game Over dentro de VR (Frente a los ojos del piloto)
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 0.05, -1.2); // Justo frente a los ojos dentro de la cabina
+vrGameOverPanel.position.set(0, 0.0, -1.15);
 vrGameOverPanel.visible = false;
 xrCameraRig.add(vrGameOverPanel);
 
-// Panel 3D Flotante de Smartphone / WhatsApp en VR
+// Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha en la consola central)
 const vrPhonePanel = createVRPhoneDistraction();
-vrPhonePanel.position.set(0.18, -0.12, -0.75); // Frente al volante al alcance de la vista
+vrPhonePanel.position.set(0.28, -0.15, -0.7);
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
-// Panel 3D Flotante de Infracción de Semáforo en VR
+// Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en el parabrisas sin tapar la calle)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(0, 0.28, -1.05); // Arriba del tablero, sin tapar la visión del frente
+vrInfractionPanel.position.set(0, 0.32, -1.0);
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
-
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambientLight);
@@ -136,20 +143,6 @@ for (let i = 0; i < numChunks; i++) {
     scene.add(chunk);
     roadChunks.push(chunk);
 }
-
-// Inicializar Vehículo del Jugador
-const playerVehicle = createPlayerVehicle();
-const player = playerVehicle.mesh;
-const cabin = playerVehicle.cabin;
-const roof = playerVehicle.roof;
-const wheelGroup = playerVehicle.wheelGroup;
-const playerWheels = playerVehicle.playerWheels;
-const tailMat = playerVehicle.tailMat;
-scene.add(player);
-
-// Posición inicial de cámara en el menú
-camera.position.set(0, 2.5, 7.0);
-camera.lookAt(0, 1.0, -10);
 
 // Lista de Obstáculos
 const obstacles = [];
@@ -625,7 +618,7 @@ function resetGame() {
     player.rotation.set(0, 0, 0);
     
     if (renderer.xr.isPresenting) {
-        xrCameraRig.position.set(0, 0, 0);
+        xrCameraRig.position.set(-0.48, 1.28, 0.15);
         showVRMenu();
     } else {
         camera.position.set(0, 2.5, 7.0);
@@ -877,19 +870,12 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            if (cameraMode === 'fpv') {
-                // Vista dentro del auto (Sentado exactamente en el asiento del piloto a la altura de los ojos)
-                xrCameraRig.position.set(player.position.x - 0.48, 1.28, player.position.z + 0.15);
-                if (cabin) cabin.visible = false;
-                if (roof) roof.visible = false;
-            } else {
-                // Vista fuera del auto (Tercera persona aérea persiguiendo al vehículo)
-                xrCameraRig.position.set(player.position.x * 0.8, 3.2, player.position.z + 5.8);
-                if (cabin) cabin.visible = true;
-                if (roof) roof.visible = true;
-            }
+            // En Realidad Virtual: El visor XR (xrCameraRig) ya es HIJO de player.
+            // Siempre estamos sentados en el puesto de conductor y el movimiento 6DOF es relativo al auto.
+            if (cabin) cabin.visible = false;
+            if (roof) roof.visible = false;
         } else if (cameraMode === 'fpv') {
-            // Modo Primera Persona en pantalla (PC / Celular)
+            // Modo Primera Persona en pantalla plana (PC / Celular)
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
             const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
@@ -900,7 +886,7 @@ function animate() {
                 currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : (targetX - player.position.x) * 0.03
             );
         } else {
-            // Modo Tercera Persona en pantalla
+            // Modo Tercera Persona en pantalla plana
             if (cabin) cabin.visible = true;
             if (roof) roof.visible = true;
             camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
@@ -994,7 +980,7 @@ function animate() {
     } else if (gameState === 'crashing') {
         if (renderer.xr.isPresenting) {
             // Mantener al piloto exactamente en su asiento durante el impacto
-            xrCameraRig.position.set(player.position.x - 0.48, 1.28, player.position.z + 0.15);
+            xrCameraRig.position.set(-0.48, 1.28, 0.15);
         } else {
             camera.position.z -= 0.5;
             camera.position.y -= 0.04;
