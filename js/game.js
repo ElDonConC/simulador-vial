@@ -74,8 +74,8 @@ scene.add(vrMenuPanel);
 // Rig de Cámara para Realidad Virtual (Controlador y Cámara integrados en la escena)
 const xrCameraRig = new THREE.Group();
 xrCameraRig.position.set(-0.48, 1.05, 0.15);
-xrCameraRig.add(camera);
-scene.add(xrCameraRig);
+scene.add(camera); // En 2D la cámara está en la raíz de la escena con coordenadas absolutas
+scene.add(xrCameraRig); // El Rig contiene los mandos VR y el HUD de VR
 
 function recenterVRCockpit() {
     if (player) {
@@ -661,6 +661,11 @@ function resetGame() {
 
 // Bucle de Animación y Física
 function animate() {
+    // Si estamos en el menú principal en pantalla plana, mantener la cámara centrada mirando al auto
+    if (gameState === 'menu' && !renderer.xr.isPresenting) {
+        camera.position.set(0, 2.5, 7.0);
+        camera.lookAt(0, 1.0, -10);
+    }
     // Lectura de mandos Meta Quest en cualquier estado
     if (renderer.xr.isPresenting) {
         const session = renderer.xr.getSession();
