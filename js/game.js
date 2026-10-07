@@ -73,9 +73,15 @@ scene.add(vrMenuPanel);
 
 // Rig de Cámara para Realidad Virtual (Anclado directamente como HIJO del auto en el asiento del piloto)
 const xrCameraRig = new THREE.Group();
-xrCameraRig.position.set(-0.48, 1.28, 0.15); // Ubicado exactamente en la cabeza del conductor dentro del auto
+xrCameraRig.position.set(-0.48, 0.96, 0.15); // Ubicado a la altura real de los ojos del conductor sobre el asiento
 xrCameraRig.add(camera);
 player.add(xrCameraRig); // ¡Al ser hijo de player, se mueve y gira automáticamente con el auto de forma 100% fija!
+
+function recenterVRCockpit() {
+    // Restablecer posición y rotación fija dentro del asiento
+    xrCameraRig.position.set(-0.48, 0.96, 0.15);
+    xrCameraRig.rotation.set(0, 0, 0);
+}
 
 // Controladores Touch y Rayos Láser Visibles (Manos en VR)
 const controller1 = renderer.xr.getController(0);
@@ -111,21 +117,21 @@ const vrHitMarker = new THREE.Mesh(
 vrHitMarker.visible = false;
 scene.add(vrHitMarker);
 
-// Panel 3D Flotante de Game Over dentro de VR (Frente a los ojos del piloto)
+// Panel 3D Flotante de Game Over dentro de VR (Frente a los ojos del piloto a 0.85m)
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 0.0, -1.15);
+vrGameOverPanel.position.set(0, 0.05, -0.85);
 vrGameOverPanel.visible = false;
 xrCameraRig.add(vrGameOverPanel);
 
-// Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha en la consola central)
+// Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha sobre la consola central a 0.55m)
 const vrPhonePanel = createVRPhoneDistraction();
-vrPhonePanel.position.set(0.28, -0.15, -0.7);
+vrPhonePanel.position.set(0.32, -0.05, -0.55);
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
-// Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en el parabrisas sin tapar la calle)
+// Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.80m)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(0, 0.32, -1.0);
+vrInfractionPanel.position.set(0, 0.35, -0.80);
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
 // Iluminación global clara
@@ -340,6 +346,7 @@ function showVRMenu() {
     gameState = 'menu';
     isBraking = false;
     isDownDown = false;
+    recenterVRCockpit();
     if (player) player.visible = false; // Ocultar auto para no obstruir el menú en VR
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
     if (vrHitMarker) vrHitMarker.visible = false;
@@ -366,6 +373,9 @@ function startGame(mode) {
     player.position.set(2.7, 0, 0);
     player.rotation.set(0, 0, 0);
     wheelGroup.rotation.z = 0;
+
+    // Asegurar centrado perfecto de la cámara en el asiento del piloto
+    recenterVRCockpit();
 
     obstacles.forEach(o => scene.remove(o));
     obstacles.length = 0;
@@ -622,7 +632,7 @@ function resetGame() {
     player.rotation.set(0, 0, 0);
     
     if (renderer.xr.isPresenting) {
-        xrCameraRig.position.set(-0.48, 1.28, 0.15);
+        recenterVRCockpit();
         showVRMenu();
     } else {
         camera.position.set(0, 2.5, 7.0);
@@ -645,6 +655,7 @@ function animate() {
             let triggerPressed = false;
             let buttonPrimary = false;   // A o X
             let buttonSecondary = false; // B o Y (Menú)
+            let thumbstickClick = false; // Click en palanca (L3 o R3) para centrar vista
 
             for (const source of session.inputSources) {
                 if (source.gamepad) {
@@ -655,6 +666,8 @@ function animate() {
                         if (gp.buttons[0] && gp.buttons[0].pressed) triggerPressed = true;
                         // Botón Grip (índice 1 - botón de agarrar lateral)
                         if (gp.buttons[1] && gp.buttons[1].pressed) gripPressed = true;
+                        // Botón Thumbstick click (índice 3 - pulsar palanca)
+                        if (gp.buttons[3] && gp.buttons[3].pressed) thumbstickClick = true;
                         // Botones A/X (índice 4)
                         if (gp.buttons[4] && gp.buttons[4].pressed) buttonPrimary = true;
                         // Botones B/Y o Menú (índice 5)
@@ -668,6 +681,11 @@ function animate() {
                         if (Math.abs(sy) > 0.25) stickYInput = sy;
                     }
                 }
+            }
+
+            // Pulsar Joystick (R3 / L3) para centrar y calibrar vista instantáneamente
+            if (thumbstickClick) {
+                recenterVRCockpit();
             }
 
             // Manejo de Menú en VR (Raycasting con Puntero Láser y Joystick)
@@ -697,21 +715,17 @@ function animate() {
                             vrHitMarker.visible = true;
                             hitFound = true;
 
-                            // Mapear coordenada UV de impacto a las 6 opciones (de 1920px de altura)
+                            // Mapear coordenada UV de impacto a las 7 opciones (de 1920px de altura)
+                            // y: 250 + idx * 155 -> UV 1.0 (arriba) a 0.0 (abajo)
                             if (hit.uv) {
-                                const uvY = hit.uv.y; // 1.0 (arriba) a 0.0 (abajo)
-                                // Item 0: y 275-430 -> uv 0.77 a 0.85
-                                // Item 1: y 450-605 -> uv 0.68 a 0.76
-                                // Item 2: y 625-780 -> uv 0.59 a 0.67
-                                // Item 3: y 800-955 -> uv 0.50 a 0.58
-                                // Item 4 (Cámara): y 975-1130 -> uv 0.41 a 0.49
-                                // Item 5 (Salir): y 1150-1305 -> uv 0.32 a 0.40
-                                if (uvY >= 0.77 && uvY <= 0.87) rayPointedIdx = 0;
-                                else if (uvY >= 0.68 && uvY < 0.77) rayPointedIdx = 1;
-                                else if (uvY >= 0.59 && uvY < 0.68) rayPointedIdx = 2;
-                                else if (uvY >= 0.50 && uvY < 0.59) rayPointedIdx = 3;
-                                else if (uvY >= 0.41 && uvY < 0.50) rayPointedIdx = 4;
-                                else if (uvY >= 0.31 && uvY < 0.41) rayPointedIdx = 5;
+                                const uvY = hit.uv.y; 
+                                if (uvY >= 0.80 && uvY <= 0.89) rayPointedIdx = 0;
+                                else if (uvY >= 0.72 && uvY < 0.80) rayPointedIdx = 1;
+                                else if (uvY >= 0.64 && uvY < 0.72) rayPointedIdx = 2;
+                                else if (uvY >= 0.56 && uvY < 0.64) rayPointedIdx = 3; // Centrar vista
+                                else if (uvY >= 0.48 && uvY < 0.56) rayPointedIdx = 4; // Volumen
+                                else if (uvY >= 0.40 && uvY < 0.48) rayPointedIdx = 5; // Cámara
+                                else if (uvY >= 0.31 && uvY < 0.40) rayPointedIdx = 6; // Salir
                             }
                             break;
                         }
@@ -727,9 +741,9 @@ function animate() {
                     vrSelectedModeIdx = rayPointedIdx;
                     vrMenuPanel.userData.render(vrSelectedModeIdx);
                 } else if (now - vrStickDebounce > 260) {
-                    // Navegación con palanca física (6 opciones: 0 a 5)
+                    // Navegación con palanca física (7 opciones: 0 a 6)
                     if (stickYInput > 0.3) {
-                        vrSelectedModeIdx = Math.min(5, vrSelectedModeIdx + 1);
+                        vrSelectedModeIdx = Math.min(6, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
                         vrStickDebounce = now;
                     } else if (stickYInput < -0.3) {
@@ -742,22 +756,28 @@ function animate() {
                 // Iniciar juego, alternar volumen, cambiar cámara o salir de VR con Gatillo o Botón A/X
                 if (triggerPressed || buttonPrimary) {
                     if (vrSelectedModeIdx === 3) {
+                        // Centrar vista en el asiento
+                        if (now - vrStickDebounce > 280) {
+                            recenterVRCockpit();
+                            vrStickDebounce = now;
+                        }
+                    } else if (vrSelectedModeIdx === 4) {
                         if (now - vrStickDebounce > 280) {
                             // Alternar volumen en ciclos: 50% -> 75% -> 100% -> 25% -> 50%
                             let nextVol = currentVolume + 0.25;
                             if (nextVol > 1.05) nextVol = 0.25;
                             setMasterVolume(nextVol);
-                            vrMenuPanel.userData.render(3);
-                            vrStickDebounce = now;
-                        }
-                    } else if (vrSelectedModeIdx === 4) {
-                        // Alternar vista interior (habitáculo) o exterior (3ra persona)
-                        if (now - vrStickDebounce > 280) {
-                            toggleCameraView();
                             vrMenuPanel.userData.render(4);
                             vrStickDebounce = now;
                         }
                     } else if (vrSelectedModeIdx === 5) {
+                        // Alternar vista interior (habitáculo) o exterior (3ra persona)
+                        if (now - vrStickDebounce > 280) {
+                            toggleCameraView();
+                            vrMenuPanel.userData.render(5);
+                            vrStickDebounce = now;
+                        }
+                    } else if (vrSelectedModeIdx === 6) {
                         // Salir de Realidad Virtual
                         if (vrSession) {
                             vrHitMarker.visible = false;
@@ -984,7 +1004,7 @@ function animate() {
     } else if (gameState === 'crashing') {
         if (renderer.xr.isPresenting) {
             // Mantener al piloto exactamente en su asiento durante el impacto
-            xrCameraRig.position.set(-0.48, 1.28, 0.15);
+            xrCameraRig.position.set(-0.48, 0.96, 0.15);
         } else {
             camera.position.z -= 0.5;
             camera.position.y -= 0.04;

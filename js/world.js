@@ -567,62 +567,63 @@ function createVRMenuPanel() {
             { title: '1. Conducción Atenta (100% Lúcido)', sub: 'Reflejos normales y control al 100%', color: '#2563eb' },
             { title: '2. Bajo Efectos del Alcohol 🍺', sub: 'Visión en túnel, retardo neuromuscular y desvío', color: '#9333ea' },
             { title: '3. Conducción Distraída (Celular) 📱', sub: 'Ceguera inatencional por mensajes de WhatsApp', color: '#d97706' },
+            { title: '🎯 Centrar Vista del Piloto (Auto-Reset)', sub: 'Recalibrar y bloquear cámara en el asiento del volante', color: '#0891b2' },
             { title: `🔊 Volumen de Audio: ${currentVolPercent}%`, sub: 'Toca con el láser para alternar nivel de sonido', color: '#0284c7' },
             { title: camText, sub: 'Alternar entre vista interior del habitáculo o vista exterior', color: '#059669' },
             { title: '🚪 SALIR DE REALIDAD VIRTUAL (VR)', sub: 'Cerrar la sesión inmersiva y volver al navegador', color: '#dc2626' }
         ];
 
         modes.forEach((m, idx) => {
-            const y = 275 + idx * 175;
+            const y = 250 + idx * 155;
             const isSel = (selectedIdx === idx);
 
             // Fondo del botón
             ctx.fillStyle = isSel ? m.color : 'rgba(30, 41, 59, 0.9)';
-            ctx.fillRect(100, y, 1848, 155);
+            ctx.fillRect(100, y, 1848, 140);
 
             // Borde brillante e indicador de puntero si está seleccionado
             ctx.strokeStyle = isSel ? '#38bdf8' : '#475569';
             ctx.lineWidth = isSel ? 10 : 4;
-            ctx.strokeRect(100, y, 1848, 155);
+            ctx.strokeRect(100, y, 1848, 140);
 
             if (isSel) {
                 // Flechas grandes llamativas
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 64px sans-serif';
+                ctx.font = 'bold 56px sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillText('👉', 130, y + 95);
+                ctx.fillText('👉', 130, y + 85);
                 ctx.textAlign = 'right';
-                ctx.fillText('👈', 1918, y + 95);
+                ctx.fillText('👈', 1918, y + 85);
             }
 
             ctx.textAlign = 'center';
             ctx.fillStyle = '#ffffff';
-            ctx.font = isSel ? '900 50px sans-serif' : 'bold 44px sans-serif';
-            ctx.fillText(m.title, 1024, y + 64);
+            ctx.font = isSel ? '900 44px sans-serif' : 'bold 40px sans-serif';
+            ctx.fillText(m.title, 1024, y + 56);
 
             ctx.fillStyle = isSel ? '#e2e8f0' : '#94a3b8';
-            ctx.font = 'bold 30px sans-serif';
-            ctx.fillText(m.sub, 1024, y + 118);
+            ctx.font = 'bold 27px sans-serif';
+            ctx.fillText(m.sub, 1024, y + 104);
         });
 
         // Caja de ayuda con los controles en las gafas
         ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
-        ctx.fillRect(100, 1345, 1848, 490);
+        ctx.fillRect(100, 1370, 1848, 470);
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 6;
-        ctx.strokeRect(100, 1345, 1848, 490);
+        ctx.strokeRect(100, 1370, 1848, 470);
 
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 46px sans-serif';
-        ctx.fillText('🕹️ GUÍA DE CONTROLES EN META QUEST:', 1024, 1415);
+        ctx.font = 'bold 44px sans-serif';
+        ctx.fillText('🕹️ GUÍA DE CONTROLES EN META QUEST:', 1024, 1435);
 
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = 'bold 36px sans-serif';
-        ctx.fillText('• Apuntar Láser y Gatillo: Elegir opción / Entrar', 1024, 1485);
-        ctx.fillText('• Botón Grip (Lateral) o Botón A: Freno de mano (STOP)', 1024, 1555);
-        ctx.fillText('• Botón B / Y / Menú: Volver al menú en cualquier momento', 1024, 1625);
-        ctx.fillText('• Notificación de Celular: Presiona Gatillo para cerrar y ver la calle', 1024, 1695);
-        ctx.fillText('• Opción 6: Salir de Realidad Virtual', 1024, 1765);
+        ctx.font = 'bold 34px sans-serif';
+        ctx.fillText('• Pulsar Joystick (R3 / L3): ¡Centrar Vista al Volante en cualquier momento!', 1024, 1500);
+        ctx.fillText('• Apuntar Láser y Gatillo: Elegir opción del menú', 1024, 1565);
+        ctx.fillText('• Botón Grip o Botón A: Frenar vehículo (STOP)', 1024, 1630);
+        ctx.fillText('• Botón B / Y: Volver al menú', 1024, 1695);
+        ctx.fillText('• Notificación Celular: Presiona Gatillo para cerrar', 1024, 1760);
 
         if (texture) texture.needsUpdate = true;
     }
