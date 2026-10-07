@@ -85,6 +85,123 @@ function createSpeedLimitSign() {
     return group;
 }
 
+// Pantalla / Velocímetro Fijo en VR (Head-Up Display anclado al campo de visión del piloto)
+function createVRHeadUpDisplay() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 384;
+    const ctx = canvas.getContext('2d');
+    let texture = null;
+
+    function render(speedKmh, isBraking) {
+        ctx.clearRect(0, 0, 1024, 384);
+
+        // Fondo HUD translúcido estilo deportivo moderno
+        ctx.fillStyle = 'rgba(10, 15, 30, 0.88)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(10, 10, 1004, 364, 24);
+        } else {
+            ctx.rect(10, 10, 1004, 364);
+        }
+        ctx.fill();
+
+        // Borde dinámico según estado
+        ctx.strokeStyle = speedKmh > 50 ? '#ef4444' : (isBraking ? '#f59e0b' : '#38bdf8');
+        ctx.lineWidth = 10;
+        ctx.stroke();
+
+        // Insignia EDUCLETA & Modo
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 36px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('VELOCÍMETRO DIGITAL', 40, 68);
+
+        // Señal Reglamentaria 50 km/h
+        ctx.fillStyle = speedKmh > 50 ? '#ef4444' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(920, 75, 45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '900 38px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('50', 920, 88);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('MÁX URBANO', 855, 78);
+
+        // Gran Dígito de Velocidad en KM/H
+        const speedVal = Math.max(0, Math.floor(speedKmh || 0));
+        ctx.fillStyle = speedVal > 50 ? '#ef4444' : (isBraking ? '#f59e0b' : '#38bdf8');
+        ctx.font = '900 160px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${speedVal}`, 460, 230);
+
+        ctx.fillStyle = speedVal > 50 ? '#fca5a5' : '#94a3b8';
+        ctx.font = 'bold 42px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('KM/H', 610, 215);
+
+        // Barra de RPM / Aceleración Inferior
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(40, 270, 944, 32);
+        
+        const rpmRatio = Math.min(1.0, speedVal / 80);
+        const barWidth = 944 * rpmRatio;
+        const grad = ctx.createLinearGradient(40, 0, 984, 0);
+        grad.addColorStop(0, '#0284c7');
+        grad.addColorStop(0.62, '#10b981');
+        grad.addColorStop(0.8, '#f59e0b');
+        grad.addColorStop(1, '#ef4444');
+        ctx.fillStyle = grad;
+        ctx.fillRect(40, 270, barWidth, 32);
+
+        // Mensaje de estado
+        if (isBraking) {
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 28px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('🛑 [ FRENANDO ]', 512, 345);
+        } else if (speedVal > 50) {
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 28px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚠️ ¡EXCESO DE VELOCIDAD (> 50 KM/H)!', 512, 345);
+        } else {
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 24px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('LÍMITE URBANO: 50 KM/H • CONDUCE ATENTO', 512, 345);
+        }
+
+        if (texture) texture.needsUpdate = true;
+    }
+
+    texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+
+    render(0, false);
+
+    const planeGeo = new THREE.PlaneGeometry(0.58, 0.22);
+    const planeMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        depthTest: false 
+    });
+    const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.renderOrder = 999;
+    mesh.userData = { canvas, ctx, texture, render };
+    return mesh;
+}
+
 // Panel Flotante 3D de Infracción / Advertencia en VR (Luz Roja / Velocidad)
 function createVRInfractionPanel() {
     const canvas = document.createElement('canvas');

@@ -135,6 +135,13 @@ const vrInfractionPanel = createVRInfractionPanel();
 vrInfractionPanel.position.set(0, 0.35, -0.80);
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
+
+// Velocímetro Fijo en VR (Head-Up Display anclado al visor sobre el parabrisas/tablero)
+const vrSpeedometerHUD = createVRHeadUpDisplay();
+vrSpeedometerHUD.position.set(0, -0.22, -0.72); // Fijado en el campo visual del piloto sin tapar la pista
+vrSpeedometerHUD.rotation.set(-0.15, 0, 0); // Leve inclinación ergonómica
+vrSpeedometerHUD.visible = false;
+xrCameraRig.add(vrSpeedometerHUD);
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambientLight);
@@ -564,6 +571,7 @@ function triggerGameOver(obstacleType, causeReason) {
 
     // Ocultar paneles secundarios en VR para evitar superposiciones
     if (vrInfractionPanel) vrInfractionPanel.visible = false;
+    if (vrSpeedometerHUD) vrSpeedometerHUD.visible = false;
 
     let currentKmh = Math.floor(speedMultiplier * 90);
     let reactionSeconds = currentMode === 'drunk' ? "2.6s (Retardo)" : (currentMode === 'distracted' ? "3.2s (Ceguera)" : "0.9s (Alerta)");
@@ -628,6 +636,7 @@ function resetGame() {
     if (elCamToggle) elCamToggle.classList.add('hidden');
     if (elHud) elHud.classList.add('opacity-0');
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
+    if (vrSpeedometerHUD) vrSpeedometerHUD.visible = false;
     
     elGameOver.classList.add('menu-hidden');
     elGameOver.classList.add('hidden');
@@ -858,6 +867,14 @@ function animate() {
         // Actualizar Velocímetro Digital y Tacómetro del Cockpit 3D (Visible en VR y FPV)
         if (playerVehicle && playerVehicle.updateCluster) {
             playerVehicle.updateCluster(displaySpeed, isBraking);
+        }
+
+        // Actualizar Velocímetro Head-Up Display Fijo en VR (Visible en las gafas)
+        if (vrSpeedometerHUD) {
+            vrSpeedometerHUD.visible = (renderer.xr.isPresenting && gameState === 'playing');
+            if (vrSpeedometerHUD.visible && vrSpeedometerHUD.userData.render) {
+                vrSpeedometerHUD.userData.render(displaySpeed, isBraking);
+            }
         }
 
         // DETECCIÓN DE EXCESO DE VELOCIDAD URBANA (> 50 km/h)
