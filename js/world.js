@@ -74,12 +74,16 @@ function createSpeedLimitSign() {
     sCtx.fillText('MÁX', 128, 195);
 
     const signTexture = new THREE.CanvasTexture(signCanvas);
-    const signGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.04, 24);
-    const signMat = new THREE.MeshBasicMaterial({ map: signTexture });
+    const signGeo = new THREE.PlaneGeometry(1.4, 1.4);
+    const signMat = new THREE.MeshBasicMaterial({ 
+        map: signTexture, 
+        transparent: true, 
+        side: THREE.DoubleSide 
+    });
     const signDisc = new THREE.Mesh(signGeo, signMat);
-    signDisc.rotation.x = Math.PI / 2;
-    signDisc.rotation.z = Math.PI; // Mirando hacia el jugador
     signDisc.position.set(0, 3.2, 0);
+    // Orientado de frente hacia el tráfico que viene por Z positiva
+    signDisc.rotation.set(0, 0, 0);
     group.add(signDisc);
 
     return group;
