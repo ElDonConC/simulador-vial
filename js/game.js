@@ -71,16 +71,17 @@ vrMenuPanel.position.set(0, 1.25, -1.5);
 vrMenuPanel.visible = false;
 scene.add(vrMenuPanel);
 
-// Rig de Cámara para Realidad Virtual (Anclado directamente como HIJO del auto en el asiento del piloto)
+// Rig de Cámara para Realidad Virtual (Controlador y Cámara integrados en la escena)
 const xrCameraRig = new THREE.Group();
-xrCameraRig.position.set(-0.48, 0.96, 0.15); // Ubicado a la altura real de los ojos del conductor sobre el asiento
+xrCameraRig.position.set(-0.48, 1.05, 0.15);
 xrCameraRig.add(camera);
-player.add(xrCameraRig); // ¡Al ser hijo de player, se mueve y gira automáticamente con el auto de forma 100% fija!
+scene.add(xrCameraRig);
 
 function recenterVRCockpit() {
-    // Restablecer posición y rotación fija dentro del asiento
-    xrCameraRig.position.set(-0.48, 0.96, 0.15);
-    xrCameraRig.rotation.set(0, 0, 0);
+    if (player) {
+        xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
+        xrCameraRig.rotation.set(0, player.rotation.y, 0);
+    }
 }
 
 // Controladores Touch y Rayos Láser Visibles (Manos en VR)
@@ -346,12 +347,16 @@ function showVRMenu() {
     gameState = 'menu';
     isBraking = false;
     isDownDown = false;
+    if (player) {
+        player.visible = true;
+        player.position.set(0, 0, 0);
+        player.rotation.set(0, 0, 0);
+    }
     recenterVRCockpit();
-    if (player) player.visible = false; // Ocultar auto para no obstruir el menú en VR
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
     if (vrHitMarker) vrHitMarker.visible = false;
     if (vrMenuPanel) {
-        vrMenuPanel.position.set(0, 1.3, -1.4);
+        vrMenuPanel.position.set(-0.48, 1.15, -0.75); // Flotando justo frente al volante
         vrMenuPanel.visible = true;
         vrMenuPanel.userData.render(vrSelectedModeIdx);
     }
@@ -369,12 +374,14 @@ function startGame(mode) {
     isBraking = false;
     isDownDown = false;
 
-    if (player) player.visible = true;
-    player.position.set(2.7, 0, 0);
-    player.rotation.set(0, 0, 0);
+    if (player) {
+        player.visible = true;
+        player.position.set(2.7, 0, 0);
+        player.rotation.set(0, 0, 0);
+    }
     wheelGroup.rotation.z = 0;
 
-    // Asegurar centrado perfecto de la cámara en el asiento del piloto
+    // Sincronizar posición del cockpit VR
     recenterVRCockpit();
 
     obstacles.forEach(o => scene.remove(o));
@@ -894,17 +901,9 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            // En Realidad Virtual: Mantener el rig de cámara fijo exactamente en el asiento del piloto
-            // Esto permite rotación libre 360° (mirar a los lados, espejos y tablero) sin que la cámara se desplace fuera del auto
-            xrCameraRig.position.set(-0.48, 0.96, 0.15);
-            
-            const xrCam = renderer.xr.getCamera();
-            if (xrCam && xrCam.cameras && xrCam.cameras.length > 0) {
-                // Compensar cualquier deriva de traslación del visor para fijar la cabeza en el asiento
-                xrCameraRig.position.x = -0.48 - xrCam.position.x;
-                xrCameraRig.position.y = 0.96 - xrCam.position.y;
-                xrCameraRig.position.z = 0.15 - xrCam.position.z;
-            }
+            // Sincronizar posición del rig de realidad virtual exactamente en el asiento del piloto
+            xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
+            xrCameraRig.rotation.set(0, player.rotation.y, 0);
 
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
@@ -1013,8 +1012,8 @@ function animate() {
         }
     } else if (gameState === 'crashing') {
         if (renderer.xr.isPresenting) {
-            // Mantener al piloto exactamente en su asiento durante el impacto
-            xrCameraRig.position.set(-0.48, 0.96, 0.15);
+            // Mantener al piloto en su asiento durante el impacto
+            xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
         } else {
             camera.position.z -= 0.5;
             camera.position.y -= 0.04;
