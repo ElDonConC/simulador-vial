@@ -894,8 +894,18 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            // En Realidad Virtual: El visor XR (xrCameraRig) ya es HIJO de player.
-            // Siempre estamos sentados en el puesto de conductor y el movimiento 6DOF es relativo al auto.
+            // En Realidad Virtual: Mantener el rig de cámara fijo exactamente en el asiento del piloto
+            // Esto permite rotación libre 360° (mirar a los lados, espejos y tablero) sin que la cámara se desplace fuera del auto
+            xrCameraRig.position.set(-0.48, 0.96, 0.15);
+            
+            const xrCam = renderer.xr.getCamera();
+            if (xrCam && xrCam.cameras && xrCam.cameras.length > 0) {
+                // Compensar cualquier deriva de traslación del visor para fijar la cabeza en el asiento
+                xrCameraRig.position.x = -0.48 - xrCam.position.x;
+                xrCameraRig.position.y = 0.96 - xrCam.position.y;
+                xrCameraRig.position.z = 0.15 - xrCam.position.z;
+            }
+
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
         } else if (cameraMode === 'fpv') {
