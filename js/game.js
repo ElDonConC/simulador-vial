@@ -787,7 +787,7 @@ function animate() {
     }
 
     if (gameState === 'playing') {
-        // Dinámica de aceleración natural y freno progresivo (Permite detenerse a 0 km/h en semáforos)
+        // Dinámica de aceleración urbana realista (Crucero cómodo de 50 a 60 km/h)
         if (isBraking) {
             // Frenado fuerte / parada en semáforo: Desacelera hasta 0.0 (Detención total)
             speedMultiplier = Math.max(0.0, speedMultiplier - 0.035);
@@ -797,27 +797,27 @@ function animate() {
             speedMultiplier = Math.max(0.0, speedMultiplier - 0.015);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else {
-            // Recuperación de aceleración de crucero (hasta 70 - 90 km/h) al soltar el freno
+            // Recuperación de aceleración de crucero suave y controlable (tope 60 km/h / 0.75)
             if (speedMultiplier < 0.2) {
-                speedMultiplier += 0.015; // Arranca de 0 con buena respuesta
-            } else if (speedMultiplier < 0.8) {
-                speedMultiplier += 0.012; // Acelera rápido de vuelta a velocidad normal
+                speedMultiplier += 0.012; // Arranca de 0 suavemente
+            } else if (speedMultiplier < 0.65) {
+                speedMultiplier += 0.008; // Sube a velocidad urbana normal (~55 km/h)
             } else {
-                speedMultiplier += 0.00015;
+                speedMultiplier += 0.0001;
             }
-            speedMultiplier = Math.min(speedMultiplier, 1.4);
+            speedMultiplier = Math.min(speedMultiplier, 0.75); // Máximo 60 km/h para control seguro
             if (elBrakeIndicator) elBrakeIndicator.classList.add('hidden');
         }
 
         // Actualizar motor de audio realista
         updateEngineAudio(speedMultiplier, isBraking);
 
-        score += speedMultiplier * 0.012;
+        score += speedMultiplier * 0.008;
         elScore.innerText = score.toFixed(1) + " km";
 
-        let displaySpeed = Math.floor(speedMultiplier * 90);
+        let displaySpeed = Math.floor(speedMultiplier * 80);
         elSpeed.innerText = displaySpeed;
-        elRpmBar.style.width = `${((Math.max(0, speedMultiplier - 0.1)) / 1.3) * 100}%`;
+        elRpmBar.style.width = `${((Math.max(0, speedMultiplier - 0.05)) / 0.75) * 100}%`;
 
         // Control lateral (Ampliado para las 4 pistas de la avenida: de -10.5 a +10.5)
         if (isLeftDown) targetX -= 0.22;
@@ -873,8 +873,8 @@ function animate() {
             camera.lookAt(player.position.x, 1.1, player.position.z - 15);
         }
 
-        // Avance y reciclaje de la carretera (Sensación de velocidad constante)
-        const moveDist = speedMultiplier * 1.8;
+        // Avance de la carretera según la velocidad del jugador
+        const moveDist = speedMultiplier * 1.15;
         roadChunks.forEach(chunk => {
             chunk.position.z += moveDist;
 
@@ -892,8 +892,8 @@ function animate() {
                     ud.g.material.color.setHex(state === 0 ? 0x00ff00 : 0x002200);
                 });
 
-                // DETECCIÓN DE INFRACCIÓN: Cruzar la línea de cruce peatonal (Z entre -1.5 y 2.5) con luz roja y velocidad > 15 km/h
-                if (state === 2 && speedMultiplier > 0.15 && chunk.position.z >= -2.0 && chunk.position.z <= 3.0 && !chunk.userData.violationRecorded) {
+                // DETECCIÓN DE INFRACCIÓN: Cruzar la línea de cruce peatonal (Z entre -1.5 y 2.5) con luz roja y velocidad > 10 km/h
+                if (state === 2 && speedMultiplier > 0.12 && chunk.position.z >= -2.0 && chunk.position.z <= 3.0 && !chunk.userData.violationRecorded) {
                     chunk.userData.violationRecorded = true;
                     showTrafficInfraction('¡Infracción Gravísima! Cruzaste la intersección con semáforo en rojo.');
                 }
@@ -907,31 +907,39 @@ function animate() {
             }
         });
 
-        // Obstáculos y Colisiones
+        // Obstáculos y Tráfico Autónomo (Siguen avanzando con su propia velocidad constante aunque el jugador frene)
         for (let i = obstacles.length - 1; i >= 0; i--) {
             let obs = obstacles[i];
 
             if (obs.userData.type === 'pedestrian') {
                 obs.position.x += obs.userData.speedX;
-                obs.position.z += moveDist;
+                obs.position.z += moveDist; // El peatón está cruzando la calzada
                 obs.userData.legs[0].rotation.x = Math.sin(Date.now() * 0.012) * 0.6;
                 obs.userData.legs[1].rotation.x = -Math.sin(Date.now() * 0.012) * 0.6;
             } else {
-                // Si viene de frente (contraflujo), la velocidad relativa es mucho mayor (suma de velocidades)
-                // Si va en nuestro mismo sentido, la velocidad relativa es menor (lo alcanzamos progresivamente)
-                let relSpeed = obs.userData.isCounterFlow ? (moveDist * 1.65) : (moveDist * 0.45);
-                obs.position.z += relSpeed;
+                // Tráfico Autónomo:
+                // Velocidad propia del vehículo de tráfico en el mundo
+                const trafficOwnSpeed = 0.55; 
+                if (obs.userData.isCounterFlow) {
+                    // Contraflujo (Vienen hacia el jugador de frente): Avanza con su propia velocidad + avance del jugador
+                    obs.position.z += (trafficOwnSpeed + moveDist);
+                } else {
+                    // Mismo sentido (Va hacia adelante): Avanza alejándose por su velocidad propia (-trafficOwnSpeed), 
+                    // compensado por el avance relativo de nuestro auto (+moveDist)
+                    obs.position.z += (moveDist - trafficOwnSpeed);
+                }
             }
 
             const distZ = Math.abs(obs.position.z - player.position.z);
             const distX = Math.abs(obs.position.x - player.position.x);
             const widthLimit = obs.userData.type === 'pedestrian' ? 1.6 : 2.4;
 
-            if (distZ < 2.8 && distX < widthLimit && obs.position.z < 1.0) {
+            if (distZ < 2.8 && distX < widthLimit && obs.position.z < 1.0 && obs.position.z > -2.0) {
                 triggerGameOver(obs.userData.type);
             }
 
-            if (obs.position.z > 15) {
+            // Reciclar obstáculos si ya quedaron muy atrás (+20m) o si un auto del mismo sentido se alejó demasiado (-140m)
+            if (obs.position.z > 20 || obs.position.z < -160) {
                 scene.remove(obs);
                 obstacles.splice(i, 1);
                 spawnObstacle();
