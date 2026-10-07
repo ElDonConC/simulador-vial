@@ -5,26 +5,28 @@
 // Materiales globales optimizados
 const roadMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
 const zebraMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const yellowLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 }); // Doble línea central amarilla
 const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
 const buildingMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
 
 const trafficColors = [0xdc2626, 0xf59e0b, 0x10b981, 0x8b5cf6, 0xf8fafc, 0x334155];
 
-// Semáforo con postes y luces
+// Semáforo con postes y luces (Orientado de frente mirando al conductor que viene acercándose)
 function createTrafficLight() {
     const group = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7.5, 6), new THREE.MeshLambertMaterial({ color: 0x475569 }));
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 7.5, 6), new THREE.MeshLambertMaterial({ color: 0x475569 }));
     pole.position.y = 3.75;
 
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.4, 0.8), new THREE.MeshLambertMaterial({ color: 0x090d16 }));
-    box.position.set(0, 6.8, 0.2);
+    // Caja orientada hacia el jugador (las luces apuntan hacia Z positiva, que es donde viene el auto)
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.4, 0.8), new THREE.MeshLambertMaterial({ color: 0x090d16 }));
+    box.position.set(0, 6.8, 0);
 
-    const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 6, 6), new THREE.MeshBasicMaterial({ color: 0x330000 }));
-    rLight.position.set(0, 7.5, 0.62);
-    const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 6, 6), new THREE.MeshBasicMaterial({ color: 0x332200 }));
-    yLight.position.set(0, 6.8, 0.62);
-    const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 6, 6), new THREE.MeshBasicMaterial({ color: 0x003300 }));
-    gLight.position.set(0, 6.1, 0.62);
+    const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x330000 }));
+    rLight.position.set(0, 7.5, 0.42);
+    const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x332200 }));
+    yLight.position.set(0, 6.8, 0.42);
+    const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x003300 }));
+    gLight.position.set(0, 6.1, 0.42);
 
     group.add(pole, box, rLight, yLight, gLight);
     group.userData = { r: rLight, y: yLight, g: gLight };
@@ -34,12 +36,12 @@ function createTrafficLight() {
 // Edificios laterales con ventanas
 function createBuilding(isLeft) {
     const group = new THREE.Group();
-    const height = 15 + Math.random() * 20;
-    const width = 8 + Math.random() * 6;
-    const depth = 25 + Math.random() * 10;
+    const height = 18 + Math.random() * 22;
+    const width = 10 + Math.random() * 6;
+    const depth = 28 + Math.random() * 10;
     
     const bMesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), buildingMat);
-    bMesh.position.set(isLeft ? -19 - width / 2 : 19 + width / 2, height / 2, 0);
+    bMesh.position.set(isLeft ? -20 - width / 2 : 20 + width / 2, height / 2, 0);
     group.add(bMesh);
 
     const winGeo = new THREE.PlaneGeometry(0.8, 1.2);
@@ -47,7 +49,7 @@ function createBuilding(isLeft) {
     for (let w = 0; w < 4; w++) {
         const win = new THREE.Mesh(winGeo, winMatOn);
         win.position.set(
-            isLeft ? -19 : 19,
+            isLeft ? -20 : 20,
             3 + Math.random() * (height - 6),
             (Math.random() - 0.5) * depth * 0.8
         );
@@ -57,69 +59,88 @@ function createBuilding(isLeft) {
     return group;
 }
 
-// Generar un bloque de pista con líneas continuas/discontinuas y árboles/farolas
+// Generar un bloque de avenida de 4 Pistas (2 por sentido)
 function createRoadChunk(index, chunkLength) {
     const chunk = new THREE.Group();
     const isIntersection = (index % 3 === 0 && index !== 0);
 
-    // Asfalto
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(22, chunkLength), roadMat);
+    // Asfalto amplio (26 metros de ancho para 4 pistas holgadas + bermas)
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(26, chunkLength), roadMat);
     ground.rotation.x = -Math.PI / 2;
     chunk.add(ground);
 
-    // Veredas
-    const swLeft = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
-    swLeft.position.set(-13, 0.17, 0);
-    const swRight = new THREE.Mesh(new THREE.BoxGeometry(4, 0.35, chunkLength), sidewalkMat);
-    swRight.position.set(13, 0.17, 0);
+    // Veredas peatonales
+    const swLeft = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.35, chunkLength), sidewalkMat);
+    swLeft.position.set(-15.25, 0.17, 0);
+    const swRight = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.35, chunkLength), sidewalkMat);
+    swRight.position.set(15.25, 0.17, 0);
     chunk.add(swLeft, swRight);
 
     // Edificios a los lados
     chunk.add(createBuilding(true));
     chunk.add(createBuilding(false));
 
-    // Marcas viales (Líneas divisorias cada 8 metros)
-    for (let zOffset = -chunkLength / 2 + 4; zOffset < chunkLength / 2; zOffset += 8) {
-        const lineL = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 4.5), zebraMat);
-        lineL.rotation.x = -Math.PI / 2;
-        lineL.position.set(-3.5, 0.02, zOffset);
-        chunk.add(lineL);
+    // Marcas viales para las 4 Pistas:
+    // Pista 1 (Contraflujo externa): X ≈ -8.0
+    // Pista 2 (Contraflujo interna): X ≈ -2.7
+    // [ EJE CENTRAL X = 0: Doble Línea Amarilla Continua ]
+    // Pista 3 (Mismo sentido interna): X ≈ +2.7
+    // Pista 4 (Mismo sentido externa): X ≈ +8.0
 
-        const lineR = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 4.5), zebraMat);
-        lineR.rotation.x = -Math.PI / 2;
-        lineR.position.set(3.5, 0.02, zOffset);
-        chunk.add(lineR);
+    // Doble línea continua amarilla en el eje central (X = -0.22 y X = +0.22)
+    const doubleLineL = new THREE.Mesh(new THREE.PlaneGeometry(0.2, chunkLength), yellowLineMat);
+    doubleLineL.rotation.x = -Math.PI / 2;
+    doubleLineL.position.set(-0.25, 0.02, 0);
+    const doubleLineR = new THREE.Mesh(new THREE.PlaneGeometry(0.2, chunkLength), yellowLineMat);
+    doubleLineR.rotation.x = -Math.PI / 2;
+    doubleLineR.position.set(0.25, 0.02, 0);
+    chunk.add(doubleLineL, doubleLineR);
+
+    // Líneas divisorias discontinuas blancas entre carriles del mismo sentido (cada 8 metros)
+    for (let zOffset = -chunkLength / 2 + 4; zOffset < chunkLength / 2; zOffset += 8) {
+        // Línea divisoria izquierda (entre Pista 1 y Pista 2) en X = -5.4
+        const lineDivL = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 4.5), zebraMat);
+        lineDivL.rotation.x = -Math.PI / 2;
+        lineDivL.position.set(-5.4, 0.02, zOffset);
+        chunk.add(lineDivL);
+
+        // Línea divisoria derecha (entre Pista 3 y Pista 4) en X = +5.4
+        const lineDivR = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 4.5), zebraMat);
+        lineDivR.rotation.x = -Math.PI / 2;
+        lineDivR.position.set(5.4, 0.02, zOffset);
+        chunk.add(lineDivR);
     }
 
     if (isIntersection) {
-        // Cruce peatonal (Paso de cebra)
-        for (let j = -4; j <= 4; j++) {
-            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 5.5), zebraMat);
+        // Cruce peatonal (Paso de cebra completo en las 4 pistas)
+        for (let j = -6; j <= 6; j++) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 6.0), zebraMat);
             stripe.rotation.x = -Math.PI / 2;
-            stripe.position.set(j * 1.8, 0.03, 0);
+            stripe.position.set(j * 1.85, 0.03, 0);
             chunk.add(stripe);
         }
 
-        // Semáforos
+        // Semáforos orientados correctamente de frente mirando al conductor
         const tlLeft = createTrafficLight();
-        tlLeft.position.set(-10.5, 0, -2);
-        tlLeft.rotation.y = Math.PI / 6;
+        tlLeft.position.set(-13.0, 0, -3.5);
+        tlLeft.rotation.y = Math.PI; // Mirando de frente hacia Z positiva
+        
         const tlRight = createTrafficLight();
-        tlRight.position.set(10.5, 0, -2);
-        tlRight.rotation.y = -Math.PI / 6;
+        tlRight.position.set(13.0, 0, -3.5);
+        tlRight.rotation.y = Math.PI; // Mirando de frente hacia Z positiva
+        
         chunk.add(tlLeft, tlRight);
-
         chunk.userData = { type: 'intersection', trafficLights: [tlLeft, tlRight] };
     } else {
         // Farola de alumbrado público
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8.5, 6), new THREE.MeshLambertMaterial({ color: 0x475569 }));
-        pole.position.set(-10.5, 4.25, 0);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 9.0, 6), new THREE.MeshLambertMaterial({ color: 0x475569 }));
+        pole.position.set(-13.0, 4.5, 0);
 
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 0.15), new THREE.MeshLambertMaterial({ color: 0x475569 }));
-        arm.position.set(-9.5, 8.4, 0);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.15, 0.15), new THREE.MeshLambertMaterial({ color: 0x475569 }));
+        arm.position.set(-11.8, 8.8, 0);
 
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffedd5 }));
-        bulb.position.set(-8.5, 8.2, 0);
+        bulb.position.set(-10.6, 8.6, 0);
 
         chunk.add(pole, arm, bulb);
         chunk.userData = { type: 'straight' };
@@ -127,12 +148,12 @@ function createRoadChunk(index, chunkLength) {
 
     // Árbol decorativo en la vereda derecha para referencia de velocidad
     const treeGroup = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 3, 6), new THREE.MeshLambertMaterial({ color: 0x5c4033 }));
-    trunk.position.y = 1.5;
-    const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4), new THREE.MeshLambertMaterial({ color: 0x16a34a }));
-    foliage.position.y = 3.6;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 3.2, 6), new THREE.MeshLambertMaterial({ color: 0x5c4033 }));
+    trunk.position.y = 1.6;
+    const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6), new THREE.MeshLambertMaterial({ color: 0x16a34a }));
+    foliage.position.y = 3.8;
     treeGroup.add(trunk, foliage);
-    treeGroup.position.set(12, 0, 10);
+    treeGroup.position.set(14.5, 0, 10);
     chunk.add(treeGroup);
 
     return chunk;

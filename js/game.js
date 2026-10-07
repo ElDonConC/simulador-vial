@@ -150,23 +150,38 @@ const obstacles = [];
 
 function spawnObstacle() {
     if (gameState !== 'playing') return;
-    const isPedestrian = Math.random() > 0.65;
+    const isPedestrian = Math.random() > 0.68;
 
     let obs;
     if (isPedestrian) {
         obs = createPedestrian();
         const startLeft = Math.random() > 0.5;
-        obs.position.set(startLeft ? -9 : 9, 0, -110 - Math.random() * 20);
-        obs.userData.speedX = startLeft ? 0.055 : -0.055;
+        obs.position.set(startLeft ? -12.5 : 12.5, 0, -110 - Math.random() * 20);
+        obs.userData.speedX = startLeft ? 0.065 : -0.065;
     } else {
         const color = trafficColors[Math.floor(Math.random() * trafficColors.length)];
         obs = createTrafficCar(color);
-        const lanes = [-4.0, 0, 4.0];
-        const laneX = lanes[Math.floor(Math.random() * lanes.length)];
-        obs.position.set(laneX, 0, -110 - Math.random() * 30);
         
-        if (laneX === -4.0) {
-            obs.rotation.y = Math.PI; // Tráfico contrario
+        // 4 Pistas:
+        // [-8.0, -2.7] -> Contraflujo (Vienen de frente)
+        // [+2.7, +8.0] -> Mismo sentido (Van hacia adelante)
+        const laneConfigs = [
+            { x: -8.0, isCounterFlow: true },
+            { x: -2.7, isCounterFlow: true },
+            { x: 2.7, isCounterFlow: false },
+            { x: 8.0, isCounterFlow: false }
+        ];
+
+        const cfg = laneConfigs[Math.floor(Math.random() * laneConfigs.length)];
+        obs.position.set(cfg.x, 0, -110 - Math.random() * 30);
+        obs.userData.isCounterFlow = cfg.isCounterFlow;
+
+        if (cfg.isCounterFlow) {
+            // Vehículo en contraflujo: Orientado hacia el jugador (mirando hacia Z positiva)
+            obs.rotation.y = Math.PI;
+        } else {
+            // Vehículo en el mismo sentido: Orientado hacia adelante (mirando hacia Z negativa)
+            obs.rotation.y = 0;
         }
     }
 
@@ -339,13 +354,13 @@ function startGame(mode) {
     currentMode = mode;
     gameState = 'playing';
     score = 0;
-    targetX = 0;
+    targetX = 2.7; // Iniciar en el carril derecho (Pista 3)
     speedMultiplier = 0.75; // Arrancar a velocidad normal de crucero (~68 km/h)
     isBraking = false;
     isDownDown = false;
 
     if (player) player.visible = true;
-    player.position.set(0, 0, 0);
+    player.position.set(2.7, 0, 0);
     player.rotation.set(0, 0, 0);
     wheelGroup.rotation.z = 0;
 
@@ -763,10 +778,10 @@ function animate() {
         elSpeed.innerText = Math.max(15, displaySpeed);
         elRpmBar.style.width = `${((speedMultiplier - 0.15) / 1.25) * 100}%`;
 
-        // Control lateral
-        if (isLeftDown) targetX -= 0.19;
-        if (isRightDown) targetX += 0.19;
-        targetX = Math.max(-5.2, Math.min(5.2, targetX));
+        // Control lateral (Ampliado para las 4 pistas de la avenida: de -10.5 a +10.5)
+        if (isLeftDown) targetX -= 0.22;
+        if (isRightDown) targetX += 0.22;
+        targetX = Math.max(-10.5, Math.min(10.5, targetX));
 
         if (currentMode === 'drunk') {
             player.position.x += (targetX - player.position.x) * 0.02;
@@ -850,7 +865,9 @@ function animate() {
                 obs.userData.legs[0].rotation.x = Math.sin(Date.now() * 0.012) * 0.6;
                 obs.userData.legs[1].rotation.x = -Math.sin(Date.now() * 0.012) * 0.6;
             } else {
-                let relSpeed = (obs.position.x < -2) ? moveDist * 1.6 : moveDist * 0.5;
+                // Si viene de frente (contraflujo), la velocidad relativa es mucho mayor (suma de velocidades)
+                // Si va en nuestro mismo sentido, la velocidad relativa es menor (lo alcanzamos progresivamente)
+                let relSpeed = obs.userData.isCounterFlow ? (moveDist * 1.65) : (moveDist * 0.45);
                 obs.position.z += relSpeed;
             }
 
