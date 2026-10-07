@@ -133,8 +133,14 @@ function createVRInfractionPanel() {
     show('⚠️ SEMÁFORO EN ROJO', '¡Infracción Gravísima! Pasaste con luz roja.');
 
     const planeGeo = new THREE.PlaneGeometry(1.6, 0.55);
-    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const planeMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        depthTest: false
+    });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.renderOrder = 999;
     mesh.userData = { canvas, ctx, texture, show };
     return mesh;
 }
@@ -417,8 +423,14 @@ function createVRGameOverPanel() {
     update('¡IMPACTO FATAL!', 'Colisión de tránsito vehicular', 'T. Reacción anulado');
 
     const planeGeo = new THREE.PlaneGeometry(1.8, 1.05);
-    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const planeMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        depthTest: false
+    });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.renderOrder = 999;
     mesh.userData = { canvas, ctx, texture, update };
     return mesh;
 }
@@ -519,8 +531,14 @@ function createVRPhoneDistraction() {
     render();
 
     const planeGeo = new THREE.PlaneGeometry(1.0, 1.0);
-    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const planeMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        depthTest: false
+    });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.renderOrder = 999;
     mesh.userData = { canvas, ctx, texture, render };
     return mesh;
 }
@@ -635,9 +653,16 @@ function createVRMenuPanel() {
 
     render(0);
 
-    const planeGeo = new THREE.PlaneGeometry(2.4, 2.25);
-    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    // Dimensiones ergonómicas para vista de cabina (1.35m ancho x 1.25m alto)
+    const planeGeo = new THREE.PlaneGeometry(1.35, 1.25);
+    const planeMat = new THREE.MeshBasicMaterial({ 
+        map: texture, 
+        transparent: true, 
+        side: THREE.DoubleSide,
+        depthTest: false // Se dibuja siempre al frente de cualquier objeto, nunca es atravesado por el auto
+    });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.renderOrder = 999; // Prioridad máxima de renderizado
     mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };
     return mesh;
 }
