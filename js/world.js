@@ -175,14 +175,15 @@ function createRoadChunk(index, chunkLength) {
             chunk.add(stripe);
         }
 
-        // Semáforos orientados correctamente de frente mirando al conductor
+        // Semáforo izquierdo: Regula a los vehículos del contraflujo (mirando hacia Z negativa, rotación 0)
         const tlLeft = createTrafficLight();
-        tlLeft.position.set(-13.0, 0, -3.5);
-        tlLeft.rotation.y = Math.PI; // Mirando de frente hacia Z positiva
+        tlLeft.position.set(-13.0, 0, 3.5);
+        tlLeft.rotation.y = 0; // Invertido, mirando de frente hacia el tráfico contrario
         
+        // Semáforo derecho: Regula al jugador y vehículos de su mismo sentido (mirando hacia Z positiva, rotación Math.PI)
         const tlRight = createTrafficLight();
         tlRight.position.set(13.0, 0, -3.5);
-        tlRight.rotation.y = Math.PI; // Mirando de frente hacia Z positiva
+        tlRight.rotation.y = Math.PI; // De frente mirando hacia el jugador
         
         chunk.add(tlLeft, tlRight);
         chunk.userData = { type: 'intersection', trafficLights: [tlLeft, tlRight] };
