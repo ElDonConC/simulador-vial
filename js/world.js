@@ -38,40 +38,40 @@ function createTrafficLight() {
 function createSpeedLimitSign() {
     const group = new THREE.Group();
 
-    // Poste metálico
+    // Poste metálico ubicado detrás del disco
     const pole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.08, 4.2, 8),
+        new THREE.CylinderGeometry(0.06, 0.06, 3.4, 8),
         new THREE.MeshLambertMaterial({ color: 0x64748b })
     );
-    pole.position.y = 2.1;
+    pole.position.set(0, 1.7, -0.04);
     group.add(pole);
 
     // Disco reglamentario con textura de 50 KM/H
     const signCanvas = document.createElement('canvas');
-    signCanvas.width = 256;
-    signCanvas.height = 256;
+    signCanvas.width = 512;
+    signCanvas.height = 512;
     const sCtx = signCanvas.getContext('2d');
 
     // Fondo blanco con borde circular rojo reglamentario
     sCtx.fillStyle = '#ffffff';
     sCtx.beginPath();
-    sCtx.arc(128, 128, 120, 0, Math.PI * 2);
+    sCtx.arc(256, 256, 240, 0, Math.PI * 2);
     sCtx.fill();
 
     sCtx.strokeStyle = '#dc2626';
-    sCtx.lineWidth = 26;
+    sCtx.lineWidth = 50;
     sCtx.stroke();
 
-    // Número 50
+    // Número 50 grande y nítido
     sCtx.fillStyle = '#0f172a';
-    sCtx.font = '900 110px sans-serif';
+    sCtx.font = '900 220px sans-serif';
     sCtx.textAlign = 'center';
-    sCtx.fillText('50', 128, 155);
+    sCtx.fillText('50', 256, 310);
 
     // Texto inferior "MÁX"
-    sCtx.font = 'bold 22px sans-serif';
+    sCtx.font = 'bold 44px sans-serif';
     sCtx.fillStyle = '#475569';
-    sCtx.fillText('MÁX', 128, 195);
+    sCtx.fillText('MÁX', 256, 390);
 
     const signTexture = new THREE.CanvasTexture(signCanvas);
     const signGeo = new THREE.PlaneGeometry(1.4, 1.4);
@@ -81,8 +81,8 @@ function createSpeedLimitSign() {
         side: THREE.DoubleSide 
     });
     const signDisc = new THREE.Mesh(signGeo, signMat);
-    signDisc.position.set(0, 3.2, 0);
-    // Orientado de frente hacia el tráfico que viene por Z positiva
+    // Ubicado al frente del poste en Z (+0.08) para que el fierro quede atrás
+    signDisc.position.set(0, 3.2, 0.08);
     signDisc.rotation.set(0, 0, 0);
     group.add(signDisc);
 
