@@ -47,6 +47,10 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
+renderer.xr.enabled = true;
+let isVRActive = false;
+let vrSession = null;
+
 // Inicializar Vehículo del Jugador
 const playerVehicle = createPlayerVehicle();
 const player = playerVehicle.mesh;
