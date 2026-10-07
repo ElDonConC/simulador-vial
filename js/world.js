@@ -416,7 +416,7 @@ function createVRGameOverPanel() {
 
     update('¡IMPACTO FATAL!', 'Colisión de tránsito vehicular', 'T. Reacción anulado');
 
-    const planeGeo = new THREE.PlaneGeometry(2.8, 1.65);
+    const planeGeo = new THREE.PlaneGeometry(1.8, 1.05);
     const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
     mesh.userData = { canvas, ctx, texture, update };

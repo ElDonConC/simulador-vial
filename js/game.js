@@ -101,19 +101,19 @@ scene.add(vrMenuPanel);
 
 // Panel 3D Flotante de Game Over dentro de VR (anclado directamente al visor XR, a la altura perfecta de los ojos)
 const vrGameOverPanel = createVRGameOverPanel();
-vrGameOverPanel.position.set(0, 0.40, -1.35); // Más arriba frente a los ojos
+vrGameOverPanel.position.set(0, 0.05, -1.2); // Justo frente a los ojos dentro de la cabina
 vrGameOverPanel.visible = false;
 xrCameraRig.add(vrGameOverPanel);
 
 // Panel 3D Flotante de Smartphone / WhatsApp en VR
 const vrPhonePanel = createVRPhoneDistraction();
-vrPhonePanel.position.set(0.22, -0.05, -0.95); // Justo frente y a la derecha del volante en el campo visual
+vrPhonePanel.position.set(0.18, -0.12, -0.75); // Frente al volante al alcance de la vista
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
 // Panel 3D Flotante de Infracción de Semáforo en VR
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(0, 0.48, -1.25);
+vrInfractionPanel.position.set(0, 0.28, -1.05); // Arriba del tablero, sin tapar la visión del frente
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
 
@@ -548,6 +548,9 @@ function triggerGameOver(obstacleType, causeReason) {
         if (crashSub) crashSub.triggerAttackRelease("C1", "2n");
     }, 120);
 
+    // Ocultar paneles secundarios en VR para evitar superposiciones
+    if (vrInfractionPanel) vrInfractionPanel.visible = false;
+
     let currentKmh = Math.floor(speedMultiplier * 90);
     let reactionSeconds = currentMode === 'drunk' ? "2.6s (Retardo)" : (currentMode === 'distracted' ? "3.2s (Ceguera)" : "0.9s (Alerta)");
     let brakingMeters = Math.floor((currentKmh * 0.278) * (currentMode === 'normal' ? 1.2 : 2.8)) + " metros";
@@ -577,10 +580,10 @@ function triggerGameOver(obstacleType, causeReason) {
             (currentMode === 'distracted' ? "<strong class='text-orange-300 font-bold'>Distracción mortal:</strong> El cerebro humano no puede procesar un mensaje de texto y conducir al mismo tiempo. Perdiste tu carril en una fracción de segundo." : "<strong class='text-blue-300 font-bold'>Conducción a la defensiva:</strong> Mantén siempre tu distancia y respeta los límites de velocidad para tener margen de maniobra.");
     }
 
-    // Mostrar panel flotante 3D si estamos en Realidad Virtual (Elevado y centrado frente a los ojos del jugador)
+    // Mostrar panel flotante 3D si estamos en Realidad Virtual (Frente a los ojos dentro del auto)
     if (renderer.xr.isPresenting && vrGameOverPanel) {
         vrGameOverPanel.userData.update('¡IMPACTO FATAL!', obstacleType === 'pedestrian' ? 'Atropello a peatón en cruce' : 'Colisión frontal contra vehículo', `${currentKmh} KM/H • ${reactionSeconds.split(' ')[0]}`);
-        vrGameOverPanel.position.set(0, 0.35, -1.35);
+        vrGameOverPanel.position.set(0, 0.05, -1.2);
         vrGameOverPanel.rotation.set(0, 0, 0);
         vrGameOverPanel.visible = true;
     }
@@ -989,7 +992,10 @@ function animate() {
             }
         }
     } else if (gameState === 'crashing') {
-        if (!renderer.xr.isPresenting) {
+        if (renderer.xr.isPresenting) {
+            // Mantener al piloto exactamente en su asiento durante el impacto
+            xrCameraRig.position.set(player.position.x - 0.48, 1.28, player.position.z + 0.15);
+        } else {
             camera.position.z -= 0.5;
             camera.position.y -= 0.04;
             camera.rotation.x -= 0.08;
