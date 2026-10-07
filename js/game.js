@@ -111,6 +111,12 @@ vrPhonePanel.position.set(0.22, -0.05, -0.95); // Justo frente y a la derecha de
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
+// Panel 3D Flotante de Infracción de Semáforo en VR
+const vrInfractionPanel = createVRInfractionPanel();
+vrInfractionPanel.position.set(0, 0.48, -1.25);
+vrInfractionPanel.visible = false;
+xrCameraRig.add(vrInfractionPanel);
+
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambientLight);
@@ -485,6 +491,38 @@ function dismissDistraction() {
     if (vrPhonePanel) vrPhonePanel.visible = false;
 }
 
+let lastInfractionTime = 0;
+function showTrafficInfraction(message) {
+    const now = Date.now();
+    if (now - lastInfractionTime < 5000) return; // Debounce de 5 segundos
+    lastInfractionTime = now;
+
+    // Alerta sonora
+    if (hornSynth) {
+        hornSynth.triggerAttackRelease(["F4", "A4"], 0.4);
+    } else if (notificationSynth) {
+        notificationSynth.triggerAttackRelease(["A4", "D4"], [0.2, 0.3]);
+    }
+
+    // Banner en Pantalla (2D)
+    const elBanner = document.getElementById('traffic-violation-banner');
+    if (elBanner) {
+        elBanner.classList.remove('hidden');
+        setTimeout(() => {
+            elBanner.classList.add('hidden');
+        }, 3800);
+    }
+
+    // Banner 3D en Realidad Virtual (VR)
+    if (renderer.xr.isPresenting && vrInfractionPanel) {
+        vrInfractionPanel.userData.show('⚠️ SEMÁFORO EN ROJO', message || '¡Cruzaste con luz roja! Debes detenerte completamente.');
+        vrInfractionPanel.visible = true;
+        setTimeout(() => {
+            vrInfractionPanel.visible = false;
+        }, 3800);
+    }
+}
+
 function triggerGameOver(obstacleType) {
     gameState = 'crashing';
     clearInterval(distractionInterval);
@@ -749,17 +787,20 @@ function animate() {
     }
 
     if (gameState === 'playing') {
-        // Dinámica de aceleración natural y freno progresivo
+        // Dinámica de aceleración natural y freno progresivo (Permite detenerse a 0 km/h en semáforos)
         if (isBraking) {
-            // Frenado fuerte al mantener pulsado el botón de freno
-            speedMultiplier = Math.max(0.1, speedMultiplier - 0.025);
+            // Frenado fuerte / parada en semáforo: Desacelera hasta 0.0 (Detención total)
+            speedMultiplier = Math.max(0.0, speedMultiplier - 0.035);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else if (isDownDown) {
-            speedMultiplier = Math.max(0.2, speedMultiplier - 0.008);
+            // Desacelerar con flecha abajo: Desacelera suavemente hasta 0.0
+            speedMultiplier = Math.max(0.0, speedMultiplier - 0.015);
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else {
-            // Recuperación rápida de aceleración de crucero (hasta 70 - 90 km/h)
-            if (speedMultiplier < 0.8) {
+            // Recuperación de aceleración de crucero (hasta 70 - 90 km/h) al soltar el freno
+            if (speedMultiplier < 0.2) {
+                speedMultiplier += 0.015; // Arranca de 0 con buena respuesta
+            } else if (speedMultiplier < 0.8) {
                 speedMultiplier += 0.012; // Acelera rápido de vuelta a velocidad normal
             } else {
                 speedMultiplier += 0.00015;
@@ -775,8 +816,8 @@ function animate() {
         elScore.innerText = score.toFixed(1) + " km";
 
         let displaySpeed = Math.floor(speedMultiplier * 90);
-        elSpeed.innerText = Math.max(15, displaySpeed);
-        elRpmBar.style.width = `${((speedMultiplier - 0.15) / 1.25) * 100}%`;
+        elSpeed.innerText = displaySpeed;
+        elRpmBar.style.width = `${((Math.max(0, speedMultiplier - 0.1)) / 1.3) * 100}%`;
 
         // Control lateral (Ampliado para las 4 pistas de la avenida: de -10.5 a +10.5)
         if (isLeftDown) targetX -= 0.22;
@@ -839,8 +880,10 @@ function animate() {
 
             if (chunk.userData.type === 'intersection') {
                 const time = Date.now() * 0.001;
+                // Ciclo de semáforo: 0..6 Verde, 6..8 Amarillo, 8..12 Rojo
                 const cycle = (time + chunk.position.z * 0.05) % 12;
                 let state = (cycle > 6 && cycle <= 8) ? 1 : ((cycle > 8) ? 2 : 0);
+                chunk.userData.trafficState = state; // Guardar estado actual (2 = Rojo)
 
                 chunk.userData.trafficLights.forEach(tl => {
                     const ud = tl.userData;
@@ -848,10 +891,19 @@ function animate() {
                     ud.y.material.color.setHex(state === 1 ? 0xffbb00 : 0x221100);
                     ud.g.material.color.setHex(state === 0 ? 0x00ff00 : 0x002200);
                 });
+
+                // DETECCIÓN DE INFRACCIÓN: Cruzar la línea de cruce peatonal (Z entre -1.5 y 2.5) con luz roja y velocidad > 15 km/h
+                if (state === 2 && speedMultiplier > 0.15 && chunk.position.z >= -2.0 && chunk.position.z <= 3.0 && !chunk.userData.violationRecorded) {
+                    chunk.userData.violationRecorded = true;
+                    showTrafficInfraction('¡Infracción Gravísima! Cruzaste la intersección con semáforo en rojo.');
+                }
             }
 
             if (chunk.position.z > chunkLength) {
                 chunk.position.z -= roadChunks.length * chunkLength;
+                if (chunk.userData.type === 'intersection') {
+                    chunk.userData.violationRecorded = false; // Resetear para el próximo ciclo de la pista
+                }
             }
         });
 

@@ -11,26 +11,81 @@ const buildingMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
 
 const trafficColors = [0xdc2626, 0xf59e0b, 0x10b981, 0x8b5cf6, 0xf8fafc, 0x334155];
 
-// Semáforo con postes y luces (Orientado de frente mirando al conductor que viene acercándose)
+// Semáforo con postes y luces (Orientado de frente mirando al conductor que viene acercándose por Z positiva)
 function createTrafficLight() {
     const group = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 7.5, 6), new THREE.MeshLambertMaterial({ color: 0x475569 }));
     pole.position.y = 3.75;
 
-    // Caja orientada hacia el jugador (las luces apuntan hacia Z positiva, que es donde viene el auto)
+    // Caja orientada hacia el jugador (las luces se ubican en la cara frontal mirando hacia Z positiva)
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.4, 0.8), new THREE.MeshLambertMaterial({ color: 0x090d16 }));
     box.position.set(0, 6.8, 0);
 
+    // Las esferas se colocan en z = -0.42 (cara frontal del semáforo)
     const rLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x330000 }));
-    rLight.position.set(0, 7.5, 0.42);
+    rLight.position.set(0, 7.5, -0.42);
     const yLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x332200 }));
-    yLight.position.set(0, 6.8, 0.42);
+    yLight.position.set(0, 6.8, -0.42);
     const gLight = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 8), new THREE.MeshBasicMaterial({ color: 0x003300 }));
-    gLight.position.set(0, 6.1, 0.42);
+    gLight.position.set(0, 6.1, -0.42);
 
     group.add(pole, box, rLight, yLight, gLight);
     group.userData = { r: rLight, y: yLight, g: gLight };
     return group;
+}
+
+// Panel Flotante 3D de Infracción / Advertencia en VR (Luz Roja)
+function createVRInfractionPanel() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1536;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    let texture = null;
+
+    function show(title, desc) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        ctx.fillRect(0, 0, 1536, 512);
+
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 14;
+        ctx.strokeRect(10, 10, 1516, 492);
+
+        // Header Rojo
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(20, 20, 1496, 120);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 72px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(title || '⚠️ INFRACCIÓN GRAVE', 768, 105);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.fillText(desc || '¡Pasaste con Semáforo en Rojo! (-100 pts)', 768, 250);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '36px sans-serif';
+        ctx.fillText('Detén el auto completamente antes de la línea de detención.', 768, 330);
+
+        ctx.fillStyle = '#f87171';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText('• En cruces regulados por semáforo el peatón tiene preferencia •', 768, 430);
+
+        if (texture) texture.needsUpdate = true;
+    }
+
+    texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+
+    show('⚠️ SEMÁFORO EN ROJO', '¡Infracción Gravísima! Pasaste con luz roja.');
+
+    const planeGeo = new THREE.PlaneGeometry(1.6, 0.55);
+    const planeMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(planeGeo, planeMat);
+    mesh.userData = { canvas, ctx, texture, show };
+    return mesh;
 }
 
 // Edificios laterales con ventanas
