@@ -97,8 +97,100 @@ function createPlayerVehicle() {
     driverSeat.position.set(-0.48, 0.82, 0.2);
     player.add(passengerSeat, driverSeat);
 
-    // Pantalla de instrumentos / Velocímetro digital
-    const cluster = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.20), new THREE.MeshBasicMaterial({ color: 0x0284c7 }));
+    // Pantalla de instrumentos / Velocímetro digital activo en Realidad Virtual (Cockpit Digital)
+    const clusterCanvas = document.createElement('canvas');
+    clusterCanvas.width = 512;
+    clusterCanvas.height = 256;
+    const clusterCtx = clusterCanvas.getContext('2d');
+    
+    const clusterTexture = new THREE.CanvasTexture(clusterCanvas);
+    clusterTexture.minFilter = THREE.LinearFilter;
+    clusterTexture.magFilter = THREE.LinearFilter;
+
+    function renderCluster(speedKmh, isBraking) {
+        clusterCtx.fillStyle = '#050b14';
+        clusterCtx.fillRect(0, 0, 512, 256);
+
+        // Borde exterior digital
+        clusterCtx.strokeStyle = speedKmh > 50 ? '#ef4444' : (isBraking ? '#f59e0b' : '#0284c7');
+        clusterCtx.lineWidth = 6;
+        clusterCtx.strokeRect(6, 6, 500, 244);
+
+        // Header: Marcha y Advertencia de Límite
+        clusterCtx.fillStyle = '#38bdf8';
+        clusterCtx.font = 'bold 22px monospace';
+        clusterCtx.textAlign = 'left';
+        clusterCtx.fillText('AUTO [ D ]', 24, 38);
+
+        // Señal de velocidad máxima 50 km/h en el tablero
+        clusterCtx.fillStyle = speedKmh > 50 ? '#ef4444' : '#ffffff';
+        clusterCtx.beginPath();
+        clusterCtx.arc(450, 48, 28, 0, Math.PI * 2);
+        clusterCtx.fill();
+        clusterCtx.strokeStyle = '#dc2626';
+        clusterCtx.lineWidth = 5;
+        clusterCtx.stroke();
+        clusterCtx.fillStyle = '#0f172a';
+        clusterCtx.font = 'bold 22px sans-serif';
+        clusterCtx.textAlign = 'center';
+        clusterCtx.fillText('50', 450, 55);
+
+        // Texto LÍMITE URBANO
+        clusterCtx.fillStyle = '#94a3b8';
+        clusterCtx.font = 'bold 13px sans-serif';
+        clusterCtx.textAlign = 'right';
+        clusterCtx.fillText('MÁX URBANO', 410, 48);
+
+        // Velocímetro Digital Principal Grande
+        const speedVal = Math.max(0, Math.floor(speedKmh || 0));
+        clusterCtx.fillStyle = speedVal > 50 ? '#ef4444' : '#38bdf8';
+        clusterCtx.font = '900 86px sans-serif';
+        clusterCtx.textAlign = 'center';
+        clusterCtx.fillText(`${speedVal}`, 256, 140);
+
+        clusterCtx.fillStyle = speedVal > 50 ? '#fca5a5' : '#7dd3fc';
+        clusterCtx.font = 'bold 24px monospace';
+        clusterCtx.fillText('KM / H', 256, 172);
+
+        // Barra de Tacómetro / RPM Inferior
+        clusterCtx.fillStyle = '#1e293b';
+        clusterCtx.fillRect(30, 195, 452, 20);
+        
+        const rpmRatio = Math.min(1.0, speedVal / 80);
+        const barWidth = 452 * rpmRatio;
+        const grad = clusterCtx.createLinearGradient(30, 0, 482, 0);
+        grad.addColorStop(0, '#0284c7');
+        grad.addColorStop(0.62, '#10b981');
+        grad.addColorStop(0.8, '#f59e0b');
+        grad.addColorStop(1, '#ef4444');
+        clusterCtx.fillStyle = grad;
+        clusterCtx.fillRect(30, 195, barWidth, 20);
+
+        // Indicador de Freno o Alerta
+        if (isBraking) {
+            clusterCtx.fillStyle = '#ef4444';
+            clusterCtx.font = 'bold 18px monospace';
+            clusterCtx.textAlign = 'center';
+            clusterCtx.fillText('🛑 [ FRENANDO ]', 256, 238);
+        } else if (speedVal > 50) {
+            clusterCtx.fillStyle = '#ef4444';
+            clusterCtx.font = 'bold 17px monospace';
+            clusterCtx.textAlign = 'center';
+            clusterCtx.fillText('⚠️ ¡EXCESO DE VELOCIDAD (>50)!', 256, 238);
+        } else {
+            clusterCtx.fillStyle = '#64748b';
+            clusterCtx.font = 'bold 15px monospace';
+            clusterCtx.textAlign = 'center';
+            clusterCtx.fillText('SISTEMA VIAL SEGURO ACTIVO', 256, 238);
+        }
+
+        clusterTexture.needsUpdate = true;
+    }
+
+    renderCluster(0, false);
+
+    const clusterMat = new THREE.MeshBasicMaterial({ map: clusterTexture });
+    const cluster = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.22), clusterMat);
     cluster.position.set(-0.48, 1.05, -0.42);
     cluster.rotation.x = -Math.PI / 5;
     player.add(cluster);
@@ -157,6 +249,7 @@ function createPlayerVehicle() {
         roof: roof,
         wheelGroup: wheelGroup,
         playerWheels: playerWheels,
-        tailMat: tailMat
+        tailMat: tailMat,
+        updateCluster: renderCluster
     };
 }

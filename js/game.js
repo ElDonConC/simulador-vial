@@ -492,9 +492,9 @@ function dismissDistraction() {
 }
 
 let lastInfractionTime = 0;
-function showTrafficInfraction(message) {
+function showTrafficInfraction(message, title, subdesc) {
     const now = Date.now();
-    if (now - lastInfractionTime < 5000) return; // Debounce de 5 segundos
+    if (now - lastInfractionTime < 4500) return; // Debounce de 4.5 segundos
     lastInfractionTime = now;
 
     // Alerta sonora
@@ -507,23 +507,32 @@ function showTrafficInfraction(message) {
     // Banner en Pantalla (2D)
     const elBanner = document.getElementById('traffic-violation-banner');
     if (elBanner) {
+        const elTitle = elBanner.querySelector('.infraction-title') || elBanner.querySelector('div.font-black');
+        const elDesc = elBanner.querySelector('.infraction-desc') || elBanner.querySelector('div.text-xs');
+        if (elTitle) elTitle.innerText = title || '¡Infracción Gravísima!';
+        if (elDesc) elDesc.innerText = message || '¡Frena y respeta las señales de tránsito!';
+        
         elBanner.classList.remove('hidden');
         setTimeout(() => {
             elBanner.classList.add('hidden');
-        }, 3800);
+        }, 4000);
     }
 
     // Banner 3D en Realidad Virtual (VR)
     if (renderer.xr.isPresenting && vrInfractionPanel) {
-        vrInfractionPanel.userData.show('⚠️ SEMÁFORO EN ROJO', message || '¡Cruzaste con luz roja! Debes detenerte completamente.');
+        vrInfractionPanel.userData.show(
+            title || '⚠️ INFRACCIÓN DE TRÁNSITO',
+            message || '¡Cruzaste con luz roja! Debes detenerte completamente.',
+            subdesc || 'Ley de Tránsito: Velocidad máxima urbana 50 km/h.'
+        );
         vrInfractionPanel.visible = true;
         setTimeout(() => {
             vrInfractionPanel.visible = false;
-        }, 3800);
+        }, 4000);
     }
 }
 
-function triggerGameOver(obstacleType) {
+function triggerGameOver(obstacleType, causeReason) {
     gameState = 'crashing';
     clearInterval(distractionInterval);
     elDistraction.classList.add('hidden');
@@ -819,6 +828,28 @@ function animate() {
         elSpeed.innerText = displaySpeed;
         elRpmBar.style.width = `${((Math.max(0, speedMultiplier - 0.05)) / 0.75) * 100}%`;
 
+        // Actualizar Velocímetro Digital y Tacómetro del Cockpit 3D (Visible en VR y FPV)
+        if (playerVehicle && playerVehicle.updateCluster) {
+            playerVehicle.updateCluster(displaySpeed, isBraking);
+        }
+
+        // DETECCIÓN DE EXCESO DE VELOCIDAD URBANA (> 50 km/h)
+        if (displaySpeed > 50) {
+            if (!window.speedingStartTime) {
+                window.speedingStartTime = Date.now();
+            } else if (Date.now() - window.speedingStartTime > 2400) {
+                // Si mantiene más de 50 km/h por más de 2.4s, disparar infracción
+                showTrafficInfraction(
+                    `¡Infracción por Exceso de Velocidad! Circulas a ${displaySpeed} km/h (Límite Urbano: 50 km/h).`,
+                    '⚡ EXCESO DE VELOCIDAD',
+                    'Ley de Tránsito: La velocidad máxima en zona urbana es 50 km/h.'
+                );
+                window.speedingStartTime = Date.now(); // Reiniciar ventana de conteo
+            }
+        } else {
+            window.speedingStartTime = 0;
+        }
+
         // Control lateral (Ampliado para las 4 pistas de la avenida: de -10.5 a +10.5)
         if (isLeftDown) targetX -= 0.22;
         if (isRightDown) targetX += 0.22;
@@ -895,7 +926,19 @@ function animate() {
                 // DETECCIÓN DE INFRACCIÓN: Cruzar la línea de cruce peatonal (Z entre -1.5 y 2.5) con luz roja y velocidad > 10 km/h
                 if (state === 2 && speedMultiplier > 0.12 && chunk.position.z >= -2.0 && chunk.position.z <= 3.0 && !chunk.userData.violationRecorded) {
                     chunk.userData.violationRecorded = true;
-                    showTrafficInfraction('¡Infracción Gravísima! Cruzaste la intersección con semáforo en rojo.');
+                    if (currentMode === 'drunk') {
+                        showTrafficInfraction(
+                            '¡Semáforo en Rojo Ignorado! Bajo el alcohol perdiste la noción de las señales y no pudiste frenar.',
+                            '🛑 LUZ ROJA BAJO ALCOHOL',
+                            'El alcohol anula el campo visual y la reacción de frenado ante luces rojas.'
+                        );
+                    } else {
+                        showTrafficInfraction(
+                            '¡Infracción Gravísima! Cruzaste la intersección con semáforo en rojo.',
+                            '🛑 SEMÁFORO EN ROJO',
+                            'Detén el vehículo por completo antes de la línea de detención.'
+                        );
+                    }
                 }
             }
 

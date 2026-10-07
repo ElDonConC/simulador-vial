@@ -74,12 +74,12 @@
             </div>
         </div>
 
-        <!-- Banner de Infracción Vial (Semáforo en Rojo) -->
-        <div id="traffic-violation-banner" class="hidden pointer-events-none fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-red-600/95 text-white border-2 border-red-400/80 px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-3 animate-bounce max-w-md text-center">
-            <span class="text-3xl">🛑</span>
+        <!-- Banner de Infracción Vial (Semáforo en Rojo / Exceso de Velocidad) -->
+        <div id="traffic-violation-banner" class="hidden pointer-events-none fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-red-600/95 text-white border-2 border-red-400/80 px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-3 animate-bounce max-w-lg text-center">
+            <span class="text-3xl">⚠️</span>
             <div class="text-left">
-                <div class="font-black text-sm uppercase tracking-wider text-red-100">¡Infracción Gravísima!</div>
-                <div class="text-xs text-white font-medium leading-tight">Cruzaste con semáforo en rojo. ¡Frena y respeta las señales!</div>
+                <div class="infraction-title font-black text-sm uppercase tracking-wider text-red-100">¡Infracción Gravísima!</div>
+                <div class="infraction-desc text-xs text-white font-medium leading-tight">Cruzaste con semáforo en rojo. ¡Frena y respeta las señales!</div>
             </div>
         </div>
 
@@ -207,13 +207,23 @@
                 </div>
             </div>
 
-            <div class="flex flex-col items-center justify-center absolute left-1/2 -translate-x-1/2 bottom-5">
-                <div class="flex items-baseline gap-1">
-                    <span id="hud-speed" class="font-black text-5xl sm:text-6xl text-sky-400 crt-glow">60</span>
-                    <span class="text-sky-500 font-bold text-sm">KM/H</span>
+            <div class="flex items-center justify-center gap-4 sm:gap-6 absolute left-1/2 -translate-x-1/2 bottom-4">
+                <!-- Señal Reglamentaria de Velocidad Máxima 50 -->
+                <div class="flex flex-col items-center">
+                    <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white border-[3.5px] border-red-600 flex flex-col items-center justify-center shadow-lg">
+                        <span class="text-slate-900 font-black text-sm sm:text-base leading-none">50</span>
+                    </div>
+                    <span class="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">MÁX</span>
                 </div>
-                <div class="w-36 sm:w-48 h-1.5 bg-slate-800/90 rounded-full mt-2 overflow-hidden p-0.5 border border-slate-700/50">
-                    <div id="rpm-bar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-full w-1/3 transition-all duration-100"></div>
+
+                <div class="flex flex-col items-center">
+                    <div class="flex items-baseline gap-1">
+                        <span id="hud-speed" class="font-black text-5xl sm:text-6xl text-sky-400 crt-glow">60</span>
+                        <span class="text-sky-500 font-bold text-sm">KM/H</span>
+                    </div>
+                    <div class="w-36 sm:w-48 h-1.5 bg-slate-800/90 rounded-full mt-1.5 overflow-hidden p-0.5 border border-slate-700/50">
+                        <div id="rpm-bar" class="h-full bg-gradient-to-r from-sky-500 to-indigo-500 rounded-full w-1/3 transition-all duration-100"></div>
+                    </div>
                 </div>
             </div>
 

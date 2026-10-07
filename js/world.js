@@ -34,7 +34,58 @@ function createTrafficLight() {
     return group;
 }
 
-// Panel Flotante 3D de Infracción / Advertencia en VR (Luz Roja)
+// Señal Vertical de Tránsito: Velocidad Máxima 50 km/h (Reglamentaria Chilena / Internacional)
+function createSpeedLimitSign() {
+    const group = new THREE.Group();
+
+    // Poste metálico
+    const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 4.2, 8),
+        new THREE.MeshLambertMaterial({ color: 0x64748b })
+    );
+    pole.position.y = 2.1;
+    group.add(pole);
+
+    // Disco reglamentario con textura de 50 KM/H
+    const signCanvas = document.createElement('canvas');
+    signCanvas.width = 256;
+    signCanvas.height = 256;
+    const sCtx = signCanvas.getContext('2d');
+
+    // Fondo blanco con borde circular rojo reglamentario
+    sCtx.fillStyle = '#ffffff';
+    sCtx.beginPath();
+    sCtx.arc(128, 128, 120, 0, Math.PI * 2);
+    sCtx.fill();
+
+    sCtx.strokeStyle = '#dc2626';
+    sCtx.lineWidth = 26;
+    sCtx.stroke();
+
+    // Número 50
+    sCtx.fillStyle = '#0f172a';
+    sCtx.font = '900 110px sans-serif';
+    sCtx.textAlign = 'center';
+    sCtx.fillText('50', 128, 155);
+
+    // Texto inferior "MÁX"
+    sCtx.font = 'bold 22px sans-serif';
+    sCtx.fillStyle = '#475569';
+    sCtx.fillText('MÁX', 128, 195);
+
+    const signTexture = new THREE.CanvasTexture(signCanvas);
+    const signGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.04, 24);
+    const signMat = new THREE.MeshBasicMaterial({ map: signTexture });
+    const signDisc = new THREE.Mesh(signGeo, signMat);
+    signDisc.rotation.x = Math.PI / 2;
+    signDisc.rotation.z = Math.PI; // Mirando hacia el jugador
+    signDisc.position.set(0, 3.2, 0);
+    group.add(signDisc);
+
+    return group;
+}
+
+// Panel Flotante 3D de Infracción / Advertencia en VR (Luz Roja / Velocidad)
 function createVRInfractionPanel() {
     const canvas = document.createElement('canvas');
     canvas.width = 1536;
@@ -42,8 +93,8 @@ function createVRInfractionPanel() {
     const ctx = canvas.getContext('2d');
     let texture = null;
 
-    function show(title, desc) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+    function show(title, desc, subdesc) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.96)';
         ctx.fillRect(0, 0, 1536, 512);
 
         ctx.strokeStyle = '#ef4444';
@@ -60,16 +111,16 @@ function createVRInfractionPanel() {
         ctx.fillText(title || '⚠️ INFRACCIÓN GRAVE', 768, 105);
 
         ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 48px sans-serif';
-        ctx.fillText(desc || '¡Pasaste con Semáforo en Rojo! (-100 pts)', 768, 250);
+        ctx.font = 'bold 46px sans-serif';
+        ctx.fillText(desc || '¡Infracción a las Normas del Tránsito!', 768, 245);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '36px sans-serif';
-        ctx.fillText('Detén el auto completamente antes de la línea de detención.', 768, 330);
+        ctx.fillText(subdesc || 'Respeta la Ley de Tránsito y conduce a la defensiva.', 768, 330);
 
         ctx.fillStyle = '#f87171';
         ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('• En cruces regulados por semáforo el peatón tiene preferencia •', 768, 430);
+        ctx.fillText('• En zona urbana la velocidad máxima es de 50 km/h •', 768, 430);
 
         if (texture) texture.needsUpdate = true;
     }
@@ -199,6 +250,14 @@ function createRoadChunk(index, chunkLength) {
         bulb.position.set(-10.6, 8.6, 0);
 
         chunk.add(pole, arm, bulb);
+
+        // Añadir Señal Reglamentaria de Velocidad Máxima 50 km/h en la vereda derecha
+        if (index % 2 === 1) {
+            const speedSign = createSpeedLimitSign();
+            speedSign.position.set(13.2, 0, -5);
+            chunk.add(speedSign);
+        }
+
         chunk.userData = { type: 'straight' };
     }
 
