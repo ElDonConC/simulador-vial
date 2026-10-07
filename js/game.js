@@ -926,20 +926,21 @@ function animate() {
             if (roof) roof.visible = false;
         } else if (cameraMode === 'fpv') {
             // Modo Primera Persona en pantalla plana (PC / Celular)
+            // Centrado ergonómico frente al volante y parabrisas para pantallas 2D
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
             const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
-            camera.position.set(player.position.x - 0.48 + headBob, 1.28, player.position.z + 0.15);
+            camera.position.set(player.position.x - 0.48 + headBob, 1.25, player.position.z + 0.15);
             camera.rotation.set(
-                -0.03, // Leve inclinación hacia abajo para ver el volante, velocímetro y la pista al frente
+                -0.03, // Leve inclinación hacia abajo para ver el velocímetro digital del tablero y la calle al frente
                 (targetX - player.position.x) * 0.04,
                 currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : (targetX - player.position.x) * 0.03
             );
         } else {
-            // Modo Tercera Persona en pantalla plana
+            // Modo Tercera Persona en pantalla plana: totalmente centrado detrás del vehículo
             if (cabin) cabin.visible = true;
             if (roof) roof.visible = true;
-            camera.position.set(player.position.x * 0.8, 3.4, player.position.z + 6.2);
+            camera.position.set(player.position.x, 3.2, player.position.z + 6.0);
             camera.lookAt(player.position.x, 1.1, player.position.z - 15);
         }
 
