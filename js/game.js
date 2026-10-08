@@ -980,8 +980,8 @@ function animate() {
 
             desktopFpvTiltEuler.set(
                 -0.03,
-                (targetX - player.position.x) * 0.04,
-                currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : (targetX - player.position.x) * 0.03
+                0,
+                currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : 0
             );
             desktopFpvLocalQuat.setFromEuler(desktopFpvTiltEuler);
             camera.quaternion.copy(player.quaternion).multiply(desktopFpvLocalQuat);
