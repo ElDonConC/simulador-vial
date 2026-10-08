@@ -185,7 +185,7 @@ xrCameraRig.add(vrPhonePanel);
 
 // Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.85m)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(-0.54, 0.42, -1.12); // Más hacia el centro, manteniendo altura/distancia
+vrInfractionPanel.position.set(-0.40, 0.42, -1.12); // Más centrado en el campo visual
 vrInfractionPanel.scale.set(0.46, 0.46, 0.46); // Mucho más pequeño
 vrInfractionPanel.visible = false;
 camera.add(vrInfractionPanel);
@@ -612,7 +612,7 @@ function showTrafficInfraction(message, title, subdesc) {
 
     // Banner 3D en Realidad Virtual (VR)
     if (renderer.xr.isPresenting && vrInfractionPanel) {
-        vrInfractionPanel.position.set(-0.54, 0.42, -1.12);
+        vrInfractionPanel.position.set(-0.40, 0.42, -1.12);
         vrInfractionPanel.scale.set(0.46, 0.46, 0.46);
         vrInfractionPanel.rotation.set(0, 0, 0);
         vrInfractionPanel.userData.show(
