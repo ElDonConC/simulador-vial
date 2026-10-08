@@ -594,6 +594,14 @@ function showTrafficInfraction(message, title, subdesc) {
         const elDesc = elBanner.querySelector('.infraction-desc') || elBanner.querySelector('div.text-xs');
         if (elTitle) elTitle.innerText = title || '¡Infracción Gravísima!';
         if (elDesc) elDesc.innerText = message || '¡Frena y respeta las señales de tránsito!';
+
+        // Forzar esquina superior izquierda en runtime (evita que clases heredadas/cache lo reubiquen)
+        elBanner.style.top = '2px';
+        elBanner.style.left = '2px';
+        elBanner.style.right = 'auto';
+        elBanner.style.bottom = 'auto';
+        elBanner.style.transform = 'none';
+        elBanner.style.margin = '0';
         
         elBanner.classList.remove('hidden');
         setTimeout(() => {
@@ -603,6 +611,7 @@ function showTrafficInfraction(message, title, subdesc) {
 
     // Banner 3D en Realidad Virtual (VR)
     if (renderer.xr.isPresenting && vrInfractionPanel) {
+        vrInfractionPanel.position.set(-0.24, 0.54, -0.80);
         vrInfractionPanel.userData.show(
             title || '⚠️ INFRACCIÓN DE TRÁNSITO',
             message || '¡Cruzaste con luz roja! Debes detenerte completamente.',
