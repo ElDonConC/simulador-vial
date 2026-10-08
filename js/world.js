@@ -225,24 +225,24 @@ function createVRInfractionPanel() {
 
         // Header Rojo
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(20, 20, 1496, 120);
+        ctx.fillRect(20, 20, 1496, 104);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 72px sans-serif';
+        ctx.font = 'bold 60px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(title || '⚠️ INFRACCIÓN GRAVE', 768, 105);
+        ctx.fillText(title || '⚠️ INFRACCIÓN GRAVE', 768, 95);
 
         ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 46px sans-serif';
-        ctx.fillText(desc || '¡Infracción a las Normas del Tránsito!', 768, 245);
+        ctx.font = 'bold 40px sans-serif';
+        ctx.fillText(desc || '¡Infracción a las Normas del Tránsito!', 768, 230);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '36px sans-serif';
-        ctx.fillText(subdesc || 'Respeta la Ley de Tránsito y conduce a la defensiva.', 768, 330);
+        ctx.font = '32px sans-serif';
+        ctx.fillText(subdesc || 'Respeta la Ley de Tránsito y conduce a la defensiva.', 768, 305);
 
         ctx.fillStyle = '#f87171';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText('• En zona urbana la velocidad máxima es de 50 km/h •', 768, 430);
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText('• En zona urbana la velocidad máxima es de 50 km/h •', 768, 392);
 
         if (texture) texture.needsUpdate = true;
     }
