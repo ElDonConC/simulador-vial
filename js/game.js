@@ -45,10 +45,6 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 const frameClock = new THREE.Clock();
 const BASE_FPS = 60;
-const desktopFpvOffset = new THREE.Vector3(-0.48, 1.25, 0.15);
-const desktopFpvWorldOffset = new THREE.Vector3();
-const desktopFpvLocalQuat = new THREE.Quaternion();
-const desktopFpvTiltEuler = new THREE.Euler();
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
@@ -731,6 +727,7 @@ function animate() {
 
     // Si estamos en el menú principal en pantalla plana, mantener la cámara centrada mirando al auto
     if (gameState === 'menu' && !renderer.xr.isPresenting) {
+        if (camera.parent !== scene) scene.add(camera);
         camera.position.set(0, 2.5, 7.0);
         camera.lookAt(0, 1.0, -10);
     }
@@ -973,22 +970,18 @@ function animate() {
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
             const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
-            desktopFpvWorldOffset.copy(desktopFpvOffset);
-            desktopFpvWorldOffset.x += headBob;
-            desktopFpvWorldOffset.applyQuaternion(player.quaternion);
-            camera.position.copy(player.position).add(desktopFpvWorldOffset);
-
-            desktopFpvTiltEuler.set(
+            if (camera.parent !== player) player.add(camera);
+            camera.position.set(-0.48 + headBob, 1.05, 0.15);
+            camera.rotation.set(
                 -0.03,
                 0,
                 currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : 0
             );
-            desktopFpvLocalQuat.setFromEuler(desktopFpvTiltEuler);
-            camera.quaternion.copy(player.quaternion).multiply(desktopFpvLocalQuat);
         } else {
             // Modo Tercera Persona en pantalla plana: totalmente centrado detrás del vehículo
             if (cabin) cabin.visible = true;
             if (roof) roof.visible = true;
+            if (camera.parent !== scene) scene.add(camera);
             camera.position.set(player.position.x, 3.2, player.position.z + 6.0);
             camera.lookAt(player.position.x, 1.1, player.position.z - 15);
         }
@@ -1083,6 +1076,7 @@ function animate() {
             xrCameraRig.position.set(-0.48, 1.05, 0.15);
             xrCameraRig.rotation.set(0, 0, 0);
         } else {
+            if (camera.parent !== scene) scene.add(camera);
             camera.position.z -= 0.5 * frameScale;
             camera.position.y -= 0.04 * frameScale;
             camera.rotation.x -= 0.08 * frameScale;
