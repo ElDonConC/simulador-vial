@@ -26,8 +26,6 @@ const elCamToggle = document.getElementById('cam-toggle');
 const elCamLabel = document.getElementById('cam-label');
 const elBtnBackMenu = document.getElementById('btn-back-menu');
 const elBrakeIndicator = document.getElementById('hud-brake-indicator');
-const tLeft = document.getElementById('touch-left');
-const tRight = document.getElementById('touch-right');
 const elQuestModal = document.getElementById('quest-modal');
 
 // Configuración Escena Three.js
@@ -45,6 +43,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
+const frameClock = new THREE.Clock();
+const BASE_FPS = 60;
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
@@ -77,6 +77,11 @@ const vrMenuPanel = createVRMenuPanel();
 vrMenuPanel.position.set(0, 0.05, -1.25); // Justo frente a los ojos a 1.25m dentro del habitáculo
 vrMenuPanel.visible = false;
 xrCameraRig.add(vrMenuPanel);
+window.refreshVRMenuPanel = function refreshVRMenuPanel() {
+    if (vrMenuPanel && vrMenuPanel.userData && vrMenuPanel.userData.render) {
+        vrMenuPanel.userData.render(vrSelectedModeIdx);
+    }
+};
 
 function recenterVRCockpit() {
     xrCameraRig.position.set(-0.48, 1.05, 0.15);
@@ -125,7 +130,9 @@ function executeVRMenuAction(idx) {
         let nextVol = currentVolume + 0.25;
         if (nextVol > 1.05) nextVol = 0.25;
         setMasterVolume(nextVol);
-        if (vrMenuPanel) vrMenuPanel.userData.render(4);
+        if (typeof window.refreshVRMenuPanel === 'function') {
+            window.refreshVRMenuPanel();
+        }
     } else if (idx === 5) {
         // Salir de Realidad Virtual
         if (vrSession) {
@@ -716,6 +723,9 @@ function resetGame() {
 
 // Bucle de Animación y Física
 function animate() {
+    const deltaTime = Math.min(frameClock.getDelta(), 0.05);
+    const frameScale = deltaTime * BASE_FPS;
+
     // Si estamos en el menú principal en pantalla plana, mantener la cámara centrada mirando al auto
     if (gameState === 'menu' && !renderer.xr.isPresenting) {
         camera.position.set(0, 2.5, 7.0);
@@ -846,7 +856,7 @@ function animate() {
 
                 // Dirección suave con Joystick
                 if (Math.abs(stickXInput) > 0.1) {
-                    targetX += stickXInput * 0.22;
+                    targetX += stickXInput * 0.22 * frameScale;
                 }
                 // Freno al mantener Grip o Botón A/X
                 isBraking = gripPressed || buttonPrimary;
@@ -863,20 +873,20 @@ function animate() {
         // Dinámica de aceleración urbana realista (Crucero cómodo de 50 a 60 km/h)
         if (isBraking) {
             // Frenado fuerte / parada en semáforo: Desacelera hasta 0.0 (Detención total)
-            speedMultiplier = Math.max(0.0, speedMultiplier - 0.035);
+            speedMultiplier = Math.max(0.0, speedMultiplier - (0.035 * frameScale));
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else if (isDownDown) {
             // Desacelerar con flecha abajo: Desacelera suavemente hasta 0.0
-            speedMultiplier = Math.max(0.0, speedMultiplier - 0.015);
+            speedMultiplier = Math.max(0.0, speedMultiplier - (0.015 * frameScale));
             if (elBrakeIndicator) elBrakeIndicator.classList.remove('hidden');
         } else {
             // Recuperación de aceleración de crucero suave y controlable (tope 60 km/h / 0.75)
             if (speedMultiplier < 0.2) {
-                speedMultiplier += 0.012; // Arranca de 0 suavemente
+                speedMultiplier += 0.012 * frameScale; // Arranca de 0 suavemente
             } else if (speedMultiplier < 0.65) {
-                speedMultiplier += 0.008; // Sube a velocidad urbana normal (~55 km/h)
+                speedMultiplier += 0.008 * frameScale; // Sube a velocidad urbana normal (~55 km/h)
             } else {
-                speedMultiplier += 0.0001;
+                speedMultiplier += 0.0001 * frameScale;
             }
             speedMultiplier = Math.min(speedMultiplier, 0.75); // Máximo 60 km/h para control seguro
             if (elBrakeIndicator) elBrakeIndicator.classList.add('hidden');
@@ -885,7 +895,7 @@ function animate() {
         // Actualizar motor de audio realista
         updateEngineAudio(speedMultiplier, isBraking);
 
-        score += speedMultiplier * 0.008;
+        score += speedMultiplier * 0.008 * frameScale;
         elScore.innerText = score.toFixed(1) + " km";
 
         let displaySpeed = Math.floor(speedMultiplier * 80);
@@ -923,15 +933,17 @@ function animate() {
         }
 
         // Control lateral (Ampliado para las 4 pistas de la avenida: de -10.5 a +10.5)
-        if (isLeftDown) targetX -= 0.22;
-        if (isRightDown) targetX += 0.22;
+        if (isLeftDown) targetX -= 0.22 * frameScale;
+        if (isRightDown) targetX += 0.22 * frameScale;
         targetX = Math.max(-10.5, Math.min(10.5, targetX));
 
+        const drunkLerp = 1 - Math.pow(1 - 0.02, frameScale);
+        const normalLerp = 1 - Math.pow(1 - 0.14, frameScale);
         if (currentMode === 'drunk') {
-            player.position.x += (targetX - player.position.x) * 0.02;
+            player.position.x += (targetX - player.position.x) * drunkLerp;
             player.position.x += Math.sin(Date.now() * 0.002) * 0.08;
         } else {
-            player.position.x += (targetX - player.position.x) * 0.14;
+            player.position.x += (targetX - player.position.x) * normalLerp;
         }
 
         const steerAngle = (player.position.x - targetX) * 0.7;
@@ -940,8 +952,8 @@ function animate() {
         player.rotation.y = steerAngle * 0.04;
 
         playerWheels.forEach(w => {
-            w.children[0].rotation.x -= speedMultiplier * 0.6;
-            w.children[1].rotation.x -= speedMultiplier * 0.6;
+            w.children[0].rotation.x -= speedMultiplier * 0.6 * frameScale;
+            w.children[1].rotation.x -= speedMultiplier * 0.6 * frameScale;
         });
 
         // Actualización de Cámara sincronizada con el auto
@@ -973,7 +985,7 @@ function animate() {
         }
 
         // Avance de la carretera según la velocidad del jugador
-        const moveDist = speedMultiplier * 1.15;
+        const moveDist = speedMultiplier * 1.15 * frameScale;
         roadChunks.forEach(chunk => {
             chunk.position.z += moveDist;
 
@@ -1030,7 +1042,7 @@ function animate() {
             } else {
                 // Tráfico Autónomo:
                 // Velocidad propia del vehículo de tráfico en el mundo
-                const trafficOwnSpeed = 0.55; 
+                const trafficOwnSpeed = 0.55 * frameScale; 
                 if (obs.userData.isCounterFlow) {
                     // Contraflujo (Vienen hacia el jugador de frente): Avanza con su propia velocidad + avance del jugador
                     obs.position.z += (trafficOwnSpeed + moveDist);
@@ -1059,11 +1071,12 @@ function animate() {
     } else if (gameState === 'crashing') {
         if (renderer.xr.isPresenting) {
             // Mantener al piloto en su asiento durante el impacto
-            xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
+            xrCameraRig.position.set(-0.48, 1.05, 0.15);
+            xrCameraRig.rotation.set(0, 0, 0);
         } else {
-            camera.position.z -= 0.5;
-            camera.position.y -= 0.04;
-            camera.rotation.x -= 0.08;
+            camera.position.z -= 0.5 * frameScale;
+            camera.position.y -= 0.04 * frameScale;
+            camera.rotation.x -= 0.08 * frameScale;
             camera.rotation.z += (Math.random() - 0.5) * 0.25;
         }
     }

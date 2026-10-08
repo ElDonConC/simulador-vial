@@ -88,18 +88,6 @@ body {
     75% { transform: translateY(4px) translateX(-48%); }
 }
 
-/* Zonas de control táctil invisibles */
-#touch-left,
-#touch-right {
-    position: absolute;
-    top: 0;
-    width: 50%;
-    height: 100%;
-    z-index: 5;
-}
-#touch-left { left: 0; }
-#touch-right { right: 0; }
-
 /* Estilo Dashboard Digital / Instrumentos */
 .hud-glass {
     background: linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.85) 45%, rgba(2,6,23,0.98) 100%);

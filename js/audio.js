@@ -20,8 +20,8 @@ function setMasterVolume(val) {
     if (label) label.innerText = Math.round(currentVolume * 100) + '%';
     
     // Si estamos en VR, refrescar panel de menú
-    if (window.vrMenuPanel && window.vrMenuPanel.userData && window.vrMenuPanel.userData.render) {
-        window.vrMenuPanel.userData.render(window.vrSelectedModeIdx || 0);
+    if (typeof window.refreshVRMenuPanel === 'function') {
+        window.refreshVRMenuPanel();
     }
 }
 
