@@ -65,17 +65,17 @@ scene.add(player);
 camera.position.set(0, 2.5, 7.0);
 camera.lookAt(0, 1.0, -10);
 
-// Menú 3D Flotante de inicio / selección de modo en VR
+// Menú 3D Flotante de inicio / selección de modo en VR (Anclado al rig de cámara)
 const vrMenuPanel = createVRMenuPanel();
-vrMenuPanel.position.set(0, 1.25, -1.5);
+vrMenuPanel.position.set(0, 0.05, -1.25); // Justo frente a los ojos del piloto a 1.25m
 vrMenuPanel.visible = false;
-scene.add(vrMenuPanel);
 
 // Rig de Cámara para Realidad Virtual (Controlador y Cámara integrados en la escena)
 const xrCameraRig = new THREE.Group();
 xrCameraRig.position.set(-0.48, 1.05, 0.15);
 scene.add(camera); // En 2D la cámara está en la raíz de la escena con coordenadas absolutas
-scene.add(xrCameraRig); // El Rig contiene los mandos VR y el HUD de VR
+scene.add(xrCameraRig); // El Rig contiene los mandos VR, el Menú y el HUD de VR
+xrCameraRig.add(vrMenuPanel);
 
 function recenterVRCockpit() {
     if (player) {
@@ -123,10 +123,6 @@ function executeVRMenuAction(idx) {
         setMasterVolume(nextVol);
         if (vrMenuPanel) vrMenuPanel.userData.render(4);
     } else if (idx === 5) {
-        // Alternar vista interior o exterior
-        toggleCameraView();
-        if (vrMenuPanel) vrMenuPanel.userData.render(5);
-    } else if (idx === 6) {
         // Salir de Realidad Virtual
         if (vrSession) {
             if (vrHitMarker) vrHitMarker.visible = false;
@@ -406,7 +402,8 @@ function showVRMenu() {
     if (vrGameOverPanel) vrGameOverPanel.visible = false;
     if (vrHitMarker) vrHitMarker.visible = false;
     if (vrMenuPanel) {
-        vrMenuPanel.position.set(-0.48, 1.15, -0.75); // Flotando justo frente al volante
+        vrMenuPanel.position.set(0, 0.05, -1.25); // Flotando cómodamente frente al visor dentro de xrCameraRig
+        vrMenuPanel.rotation.set(0, 0, 0);
         vrMenuPanel.visible = true;
         vrMenuPanel.userData.render(vrSelectedModeIdx);
     }
@@ -779,13 +776,13 @@ function animate() {
                             vrHitMarker.visible = true;
                             hitFound = true;
 
-                            // Mapear coordenada UV de impacto a las 7 opciones (de 1920px de altura)
-                            // Cada botón tiene altura 140px con paso de 155px comenzando en y=250px
+                            // Mapear coordenada UV de impacto a las 6 opciones (de 1300px de altura)
+                            // Cada botón tiene altura 130px con paso de 150px comenzando en y=230px
                             if (hit.uv) {
-                                const pixelY = (1.0 - hit.uv.y) * 1920;
-                                if (pixelY >= 235 && pixelY <= 1345) {
-                                    const calculatedIdx = Math.floor((pixelY - 235) / 155);
-                                    if (calculatedIdx >= 0 && calculatedIdx <= 6) {
+                                const pixelY = (1.0 - hit.uv.y) * 1300;
+                                if (pixelY >= 215 && pixelY <= 1130) {
+                                    const calculatedIdx = Math.floor((pixelY - 215) / 150);
+                                    if (calculatedIdx >= 0 && calculatedIdx <= 5) {
                                         rayPointedIdx = calculatedIdx;
                                     }
                                 }
@@ -804,9 +801,9 @@ function animate() {
                     vrSelectedModeIdx = rayPointedIdx;
                     vrMenuPanel.userData.render(vrSelectedModeIdx);
                 } else if (now - vrStickDebounce > 260) {
-                    // Navegación con palanca física (7 opciones: 0 a 6)
+                    // Navegación con palanca física (6 opciones: 0 a 5)
                     if (stickYInput > 0.3) {
-                        vrSelectedModeIdx = Math.min(6, vrSelectedModeIdx + 1);
+                        vrSelectedModeIdx = Math.min(5, vrSelectedModeIdx + 1);
                         vrMenuPanel.userData.render(vrSelectedModeIdx);
                         vrStickDebounce = now;
                     } else if (stickYInput < -0.3) {
