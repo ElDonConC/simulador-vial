@@ -111,6 +111,49 @@ xrCameraRig.add(controllerGrip2);
 const vrRaycaster = new THREE.Raycaster();
 const vrTempMatrix = new THREE.Matrix4();
 
+// Función unificada para ejecutar acciones de opciones del menú VR
+function executeVRMenuAction(idx) {
+    if (idx === 3) {
+        // Centrar vista en el habitáculo
+        recenterVRCockpit();
+    } else if (idx === 4) {
+        // Alternar volumen de audio
+        let nextVol = currentVolume + 0.25;
+        if (nextVol > 1.05) nextVol = 0.25;
+        setMasterVolume(nextVol);
+        if (vrMenuPanel) vrMenuPanel.userData.render(4);
+    } else if (idx === 5) {
+        // Alternar vista interior o exterior
+        toggleCameraView();
+        if (vrMenuPanel) vrMenuPanel.userData.render(5);
+    } else if (idx === 6) {
+        // Salir de Realidad Virtual
+        if (vrSession) {
+            if (vrHitMarker) vrHitMarker.visible = false;
+            vrSession.end();
+        }
+    } else if (idx >= 0 && idx <= 2) {
+        // Iniciar modo de juego
+        const modes = ['normal', 'drunk', 'distracted'];
+        if (vrHitMarker) vrHitMarker.visible = false;
+        startGame(modes[idx]);
+    }
+}
+
+// Manejador de evento Select (Gatillo WebXR en Meta Quest)
+function handleVRControllerSelect() {
+    if (gameState === 'menu') {
+        executeVRMenuAction(vrSelectedModeIdx);
+    } else if (gameState === 'crashing') {
+        resetGame();
+    } else if (gameState === 'playing' && isDistractionActive) {
+        dismissDistraction();
+    }
+}
+
+controller1.addEventListener('select', handleVRControllerSelect);
+controller2.addEventListener('select', handleVRControllerSelect);
+
 const vrHitMarker = new THREE.Mesh(
     new THREE.RingGeometry(0.02, 0.045, 24),
     new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, depthTest: false })
@@ -737,16 +780,15 @@ function animate() {
                             hitFound = true;
 
                             // Mapear coordenada UV de impacto a las 7 opciones (de 1920px de altura)
-                            // y: 250 + idx * 155 -> UV 1.0 (arriba) a 0.0 (abajo)
+                            // Cada botón tiene altura 140px con paso de 155px comenzando en y=250px
                             if (hit.uv) {
-                                const uvY = hit.uv.y; 
-                                if (uvY >= 0.80 && uvY <= 0.89) rayPointedIdx = 0;
-                                else if (uvY >= 0.72 && uvY < 0.80) rayPointedIdx = 1;
-                                else if (uvY >= 0.64 && uvY < 0.72) rayPointedIdx = 2;
-                                else if (uvY >= 0.56 && uvY < 0.64) rayPointedIdx = 3; // Centrar vista
-                                else if (uvY >= 0.48 && uvY < 0.56) rayPointedIdx = 4; // Volumen
-                                else if (uvY >= 0.40 && uvY < 0.48) rayPointedIdx = 5; // Cámara
-                                else if (uvY >= 0.31 && uvY < 0.40) rayPointedIdx = 6; // Salir
+                                const pixelY = (1.0 - hit.uv.y) * 1920;
+                                if (pixelY >= 235 && pixelY <= 1345) {
+                                    const calculatedIdx = Math.floor((pixelY - 235) / 155);
+                                    if (calculatedIdx >= 0 && calculatedIdx <= 6) {
+                                        rayPointedIdx = calculatedIdx;
+                                    }
+                                }
                             }
                             break;
                         }
@@ -774,41 +816,10 @@ function animate() {
                     }
                 }
 
-                // Iniciar juego, alternar volumen, cambiar cámara o salir de VR con Gatillo o Botón A/X
-                if (triggerPressed || buttonPrimary) {
-                    if (vrSelectedModeIdx === 3) {
-                        // Centrar vista en el asiento
-                        if (now - vrStickDebounce > 280) {
-                            recenterVRCockpit();
-                            vrStickDebounce = now;
-                        }
-                    } else if (vrSelectedModeIdx === 4) {
-                        if (now - vrStickDebounce > 280) {
-                            // Alternar volumen en ciclos: 50% -> 75% -> 100% -> 25% -> 50%
-                            let nextVol = currentVolume + 0.25;
-                            if (nextVol > 1.05) nextVol = 0.25;
-                            setMasterVolume(nextVol);
-                            vrMenuPanel.userData.render(4);
-                            vrStickDebounce = now;
-                        }
-                    } else if (vrSelectedModeIdx === 5) {
-                        // Alternar vista interior (habitáculo) o exterior (3ra persona)
-                        if (now - vrStickDebounce > 280) {
-                            toggleCameraView();
-                            vrMenuPanel.userData.render(5);
-                            vrStickDebounce = now;
-                        }
-                    } else if (vrSelectedModeIdx === 6) {
-                        // Salir de Realidad Virtual
-                        if (vrSession) {
-                            vrHitMarker.visible = false;
-                            vrSession.end();
-                        }
-                    } else {
-                        const modes = ['normal', 'drunk', 'distracted'];
-                        vrHitMarker.visible = false;
-                        startGame(modes[vrSelectedModeIdx]);
-                    }
+                // Iniciar juego o ejecutar opción con Gatillo o Botón A/X
+                if ((triggerPressed || buttonPrimary) && (now - vrStickDebounce > 300)) {
+                    vrStickDebounce = now;
+                    executeVRMenuAction(vrSelectedModeIdx);
                 }
             } else if (gameState === 'crashing') {
                 // Reinicio desde choque
