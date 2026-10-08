@@ -191,7 +191,7 @@ xrCameraRig.add(vrInfractionPanel);
 
 // Velocímetro Fijo en VR (anclado al tablero del auto, no al visor)
 const vrSpeedometerHUD = createVRHeadUpDisplay();
-vrSpeedometerHUD.position.set(-0.18, 1.16, -0.34); // Elevado y adelantado para evitar oclusión por estructura
+vrSpeedometerHUD.position.set(-0.36, 1.16, -0.34); // Desplazado a la izquierda para no interferir con mensajes a la derecha
 vrSpeedometerHUD.rotation.set(-0.58, 0, 0); // Inclinación hacia la vista del piloto
 vrSpeedometerHUD.visible = false;
 player.add(vrSpeedometerHUD);
