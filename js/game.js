@@ -185,9 +185,9 @@ xrCameraRig.add(vrPhonePanel);
 
 // Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.85m)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(0, 0.45, -0.85);
+vrInfractionPanel.position.set(-0.34, 0.26, -0.92); // HUD superior-izquierda relativo al visor
 vrInfractionPanel.visible = false;
-xrCameraRig.add(vrInfractionPanel);
+camera.add(vrInfractionPanel);
 
 // Velocímetro Fijo en VR (anclado al tablero del auto, no al visor)
 const vrSpeedometerHUD = createVRHeadUpDisplay();
@@ -611,7 +611,8 @@ function showTrafficInfraction(message, title, subdesc) {
 
     // Banner 3D en Realidad Virtual (VR)
     if (renderer.xr.isPresenting && vrInfractionPanel) {
-        vrInfractionPanel.position.set(-0.24, 0.54, -0.80);
+        vrInfractionPanel.position.set(-0.34, 0.26, -0.92);
+        vrInfractionPanel.rotation.set(0, 0, 0);
         vrInfractionPanel.userData.show(
             title || '⚠️ INFRACCIÓN DE TRÁNSITO',
             message || '¡Cruzaste con luz roja! Debes detenerte completamente.',
