@@ -179,13 +179,13 @@ xrCameraRig.add(vrGameOverPanel);
 
 // Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha sobre la consola central a 0.70m)
 const vrPhonePanel = createVRPhoneDistraction();
-vrPhonePanel.position.set(0.32, -0.12, -0.70);
+vrPhonePanel.position.set(0.32, 0.24, -0.76); // Más arriba de forma considerable
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
 // Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.85m)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(-0.24, 0.42, -1.12); // Ajuste más notorio hacia el centro
+vrInfractionPanel.position.set(-0.24, 0.30, -1.12); // Más abajo, manteniendo centrado
 vrInfractionPanel.scale.set(0.46, 0.46, 0.46); // Mucho más pequeño
 vrInfractionPanel.visible = false;
 camera.add(vrInfractionPanel);
@@ -550,10 +550,10 @@ function triggerDistraction() {
     // 4. Mostrar teléfono flotante en Realidad Virtual (ubicado hacia la consola central/derecha sin tapar el parasol superior)
     if (renderer.xr.isPresenting && vrPhonePanel) {
         const vrOffsets = [
-            { x: 0.32, y: -0.06, z: -0.80 },
-            { x: 0.36, y: 0.05, z: -0.82 },
-            { x: 0.28, y: -0.12, z: -0.78 },
-            { x: -0.32, y: -0.06, z: -0.80 }
+            { x: 0.32, y: 0.24, z: -0.86 },
+            { x: 0.36, y: 0.32, z: -0.88 },
+            { x: 0.28, y: 0.18, z: -0.84 },
+            { x: -0.32, y: 0.24, z: -0.86 }
         ];
         const vPos = vrOffsets[Math.floor(Math.random() * vrOffsets.length)];
         vrPhonePanel.position.set(vPos.x, vPos.y, vPos.z);
@@ -612,7 +612,7 @@ function showTrafficInfraction(message, title, subdesc) {
 
     // Banner 3D en Realidad Virtual (VR)
     if (renderer.xr.isPresenting && vrInfractionPanel) {
-        vrInfractionPanel.position.set(-0.24, 0.42, -1.12);
+        vrInfractionPanel.position.set(-0.24, 0.30, -1.12);
         vrInfractionPanel.scale.set(0.46, 0.46, 0.46);
         vrInfractionPanel.rotation.set(0, 0, 0);
         vrInfractionPanel.userData.show(
