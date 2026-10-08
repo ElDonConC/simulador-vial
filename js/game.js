@@ -167,15 +167,15 @@ vrGameOverPanel.position.set(0, 0.05, -0.85);
 vrGameOverPanel.visible = false;
 xrCameraRig.add(vrGameOverPanel);
 
-// Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha sobre la consola central a 0.55m)
+// Panel 3D Flotante de Smartphone / WhatsApp en VR (Hacia la derecha sobre la consola central a 0.70m)
 const vrPhonePanel = createVRPhoneDistraction();
-vrPhonePanel.position.set(0.32, -0.05, -0.55);
+vrPhonePanel.position.set(0.32, -0.12, -0.70);
 vrPhonePanel.visible = false;
 xrCameraRig.add(vrPhonePanel);
 
-// Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.80m)
+// Panel 3D Flotante de Infracción de Tránsito en VR (Arriba en la franja del parasol a 0.85m)
 const vrInfractionPanel = createVRInfractionPanel();
-vrInfractionPanel.position.set(0, 0.35, -0.80);
+vrInfractionPanel.position.set(0, 0.45, -0.85);
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
 
@@ -516,13 +516,13 @@ function triggerDistraction() {
     if (elSender) elSender.innerText = notif.sender;
     if (elBody) elBody.innerText = notif.text;
 
-    // 2. Aleatorizar la posición de la ventana del celular en pantalla (para que nunca salga en el mismo lugar)
+    // 2. Posicionar la ventana del celular en pantalla (arriba a la derecha/izquierda sin tapar el banner superior)
     const positions = [
-        { top: '15%', left: '30%', transform: 'translate(-50%, 0)' },
-        { top: '22%', left: '50%', transform: 'translate(-50%, 0)' },
-        { top: '18%', left: '70%', transform: 'translate(-50%, 0)' },
-        { top: '35%', left: '35%', transform: 'translate(-50%, 0)' },
-        { top: '32%', left: '65%', transform: 'translate(-50%, 0)' }
+        { top: '10%', left: '72%', transform: 'translate(-50%, 0)' },
+        { top: '12%', left: '26%', transform: 'translate(-50%, 0)' },
+        { top: '14%', left: '78%', transform: 'translate(-50%, 0)' },
+        { top: '18%', left: '24%', transform: 'translate(-50%, 0)' },
+        { top: '12%', left: '70%', transform: 'translate(-50%, 0)' }
     ];
     const pos = positions[Math.floor(Math.random() * positions.length)];
     elDistraction.style.top = pos.top;
@@ -539,13 +539,13 @@ function triggerDistraction() {
 
     elDistraction.classList.remove('hidden');
 
-    // 4. Mostrar teléfono flotante en Realidad Virtual en posiciones y orientaciones dinámicas
+    // 4. Mostrar teléfono flotante en Realidad Virtual (ubicado hacia la consola central/derecha sin tapar el parasol superior)
     if (renderer.xr.isPresenting && vrPhonePanel) {
         const vrOffsets = [
-            { x: 0.22, y: -0.05, z: -0.95 },
-            { x: -0.22, y: -0.05, z: -0.95 },
-            { x: 0.0, y: 0.12, z: -0.90 },
-            { x: 0.28, y: 0.10, z: -0.92 }
+            { x: 0.32, y: -0.06, z: -0.80 },
+            { x: 0.36, y: 0.05, z: -0.82 },
+            { x: 0.28, y: -0.12, z: -0.78 },
+            { x: -0.32, y: -0.06, z: -0.80 }
         ];
         const vPos = vrOffsets[Math.floor(Math.random() * vrOffsets.length)];
         vrPhonePanel.position.set(vPos.x, vPos.y, vPos.z);
