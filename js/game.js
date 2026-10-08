@@ -50,6 +50,8 @@ const BASE_FPS = 60;
 renderer.xr.enabled = true;
 let isVRActive = false;
 let vrSession = null;
+let vrSelectedModeIdx = 0;
+let vrStickDebounce = 0;
 
 // Inicializar Vehículo del Jugador
 const playerVehicle = createPlayerVehicle();
@@ -407,9 +409,6 @@ async function toggleVRMode() {
         vrSession.end();
     }
 }
-
-let vrSelectedModeIdx = 0;
-let vrStickDebounce = 0;
 
 function showVRMenu() {
     gameState = 'menu';
