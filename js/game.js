@@ -65,16 +65,16 @@ scene.add(player);
 camera.position.set(0, 2.5, 7.0);
 camera.lookAt(0, 1.0, -10);
 
-// Menú 3D Flotante de inicio / selección de modo en VR (Anclado al rig de cámara)
+// Rig de Cámara para Realidad Virtual (Contiene la cámara del visor y los mandos)
+const xrCameraRig = new THREE.Group();
+xrCameraRig.position.set(-0.48, 1.05, 0.15);
+xrCameraRig.add(camera); // Three.js WebXR actualiza camera localmente respecto a su padre xrCameraRig
+scene.add(xrCameraRig);
+
+// Menú 3D Flotante de inicio / selección de modo en VR (Anclado al rig de cámara frente al piloto)
 const vrMenuPanel = createVRMenuPanel();
 vrMenuPanel.position.set(0, 0.05, -1.25); // Justo frente a los ojos del piloto a 1.25m
 vrMenuPanel.visible = false;
-
-// Rig de Cámara para Realidad Virtual (Controlador y Cámara integrados en la escena)
-const xrCameraRig = new THREE.Group();
-xrCameraRig.position.set(-0.48, 1.05, 0.15);
-scene.add(camera); // En 2D la cámara está en la raíz de la escena con coordenadas absolutas
-scene.add(xrCameraRig); // El Rig contiene los mandos VR, el Menú y el HUD de VR
 xrCameraRig.add(vrMenuPanel);
 
 function recenterVRCockpit() {
@@ -92,10 +92,15 @@ const controllerGrip2 = renderer.xr.getControllerGrip(1);
 
 function createControllerPointer() {
     const rayGroup = new THREE.Group();
-    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -4.0)]);
+    // Línea láser que apunta hacia adelante (-Z en Three.js)
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -3.5)]);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3, transparent: true, opacity: 0.85 });
     const rayLine = new THREE.Line(lineGeo, lineMat);
-    const handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    // Esfera luminosa en la mano
+    const handGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+    );
     rayGroup.add(rayLine, handGlow);
     return rayGroup;
 }
@@ -367,6 +372,11 @@ async function toggleVRMode() {
             isVRActive = true;
             document.getElementById('vr-btn-label').innerText = 'Salir de VR';
             
+            // En VR, la cámara del headset debe pertenecer al xrCameraRig para heredar el movimiento del auto
+            xrCameraRig.add(camera);
+            camera.position.set(0, 0, 0);
+            camera.rotation.set(0, 0, 0);
+
             // Al entrar en VR, mostrar el menú 3D en el visor
             showVRMenu();
 
@@ -374,8 +384,13 @@ async function toggleVRMode() {
                 isVRActive = false;
                 vrSession = null;
                 document.getElementById('vr-btn-label').innerText = '🥽 Entrar en VR (Meta Quest)';
+                // Al salir de VR, regresar la cámara a la escena raíz para modo escritorio
+                scene.add(camera);
+                camera.position.set(0, 2.5, 7.0);
+                camera.lookAt(0, 1.0, -10);
                 if (vrMenuPanel) vrMenuPanel.visible = false;
                 if (vrGameOverPanel) vrGameOverPanel.visible = false;
+                if (vrSpeedometerHUD) vrSpeedometerHUD.visible = false;
             });
         } catch (err) {
             console.error("No se pudo iniciar la sesión VR:", err);
