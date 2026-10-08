@@ -45,7 +45,7 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 const frameClock = new THREE.Clock();
 const BASE_FPS = 60;
-const VR_COCKPIT_ANCHOR = new THREE.Vector3(-0.48, 1.10, 0.02);
+const VR_COCKPIT_ANCHOR = new THREE.Vector3(-0.48, 1.40, 0.02);
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
