@@ -65,23 +65,22 @@ scene.add(player);
 camera.position.set(0, 2.5, 7.0);
 camera.lookAt(0, 1.0, -10);
 
-// Rig de Cámara para Realidad Virtual (Contiene la cámara del visor y los mandos)
+// Rig de Cámara para Realidad Virtual (Anclado directamente como hijo del vehículo del jugador)
+// Al ser hijo directo de `player`, TODO lo que ocurra en el auto (giro, avance, deriva) lo acompaña 100% de forma física y matemática
 const xrCameraRig = new THREE.Group();
-xrCameraRig.position.set(-0.48, 1.05, 0.15);
-xrCameraRig.add(camera); // Three.js WebXR actualiza camera localmente respecto a su padre xrCameraRig
-scene.add(xrCameraRig);
+xrCameraRig.position.set(-0.48, 1.05, 0.15); // Asiento exacto del piloto frente al volante
+xrCameraRig.add(camera);
+player.add(xrCameraRig);
 
-// Menú 3D Flotante de inicio / selección de modo en VR (Anclado al rig de cámara frente al piloto)
+// Menú 3D Flotante de inicio / selección de modo en VR (Frente al piloto)
 const vrMenuPanel = createVRMenuPanel();
-vrMenuPanel.position.set(0, 0.05, -1.25); // Justo frente a los ojos del piloto a 1.25m
+vrMenuPanel.position.set(0, 0.05, -1.25); // Justo frente a los ojos a 1.25m dentro del habitáculo
 vrMenuPanel.visible = false;
 xrCameraRig.add(vrMenuPanel);
 
 function recenterVRCockpit() {
-    if (player) {
-        xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
-        xrCameraRig.rotation.set(0, player.rotation.y, 0);
-    }
+    xrCameraRig.position.set(-0.48, 1.05, 0.15);
+    xrCameraRig.rotation.set(0, 0, 0);
 }
 
 // Controladores Touch y Rayos Láser Visibles (Manos en VR)
@@ -96,9 +95,9 @@ function createControllerPointer() {
     const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -3.5)]);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3, transparent: true, opacity: 0.85 });
     const rayLine = new THREE.Line(lineGeo, lineMat);
-    // Esfera luminosa en la mano
+    // Esfera indicadora en la mano
     const handGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.025, 12, 12),
+        new THREE.SphereGeometry(0.03, 12, 12),
         new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
     );
     rayGroup.add(rayLine, handGlow);
@@ -365,14 +364,15 @@ async function toggleVRMode() {
     if (!isVRActive) {
         try {
             const session = await navigator.xr.requestSession('immersive-vr', {
-                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                optionalFeatures: ['local-floor', 'local', 'bounded-floor', 'hand-tracking']
             });
             await renderer.xr.setSession(session);
+            renderer.xr.setReferenceSpaceType('local'); // Origen fijado en la cabeza del piloto
             vrSession = session;
             isVRActive = true;
             document.getElementById('vr-btn-label').innerText = 'Salir de VR';
             
-            // En VR, la cámara del headset debe pertenecer al xrCameraRig para heredar el movimiento del auto
+            // Asegurar que la cámara está anclada al xrCameraRig dentro del player
             xrCameraRig.add(camera);
             camera.position.set(0, 0, 0);
             camera.rotation.set(0, 0, 0);
@@ -946,9 +946,9 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            // Sincronizar posición del rig de realidad virtual exactamente en el asiento del piloto
-            xrCameraRig.position.set(player.position.x - 0.48, player.position.y + 1.05, player.position.z + 0.15);
-            xrCameraRig.rotation.set(0, player.rotation.y, 0);
+            // El xrCameraRig ya es hijo de player; mantenemos su posición fija local en el habitáculo
+            xrCameraRig.position.set(-0.48, 1.05, 0.15);
+            xrCameraRig.rotation.set(0, 0, 0);
 
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
