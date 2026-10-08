@@ -45,6 +45,7 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 const frameClock = new THREE.Clock();
 const BASE_FPS = 60;
+const VR_COCKPIT_ANCHOR = new THREE.Vector3(-0.48, 1.02, 0.02);
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
@@ -70,7 +71,7 @@ camera.lookAt(0, 1.0, -10);
 // Rig de Cámara para Realidad Virtual (Anclado directamente como hijo del vehículo del jugador)
 // Al ser hijo directo de `player`, TODO lo que ocurra en el auto (giro, avance, deriva) lo acompaña 100% de forma física y matemática
 const xrCameraRig = new THREE.Group();
-xrCameraRig.position.set(-0.48, 1.05, 0.15); // Asiento exacto del piloto frente al volante
+xrCameraRig.position.copy(VR_COCKPIT_ANCHOR); // Asiento exacto del piloto frente al volante
 xrCameraRig.add(camera);
 player.add(xrCameraRig);
 
@@ -86,7 +87,7 @@ window.refreshVRMenuPanel = function refreshVRMenuPanel() {
 };
 
 function recenterVRCockpit() {
-    xrCameraRig.position.set(-0.48, 1.05, 0.15);
+    xrCameraRig.position.copy(VR_COCKPIT_ANCHOR);
     xrCameraRig.rotation.set(0, 0, 0);
 }
 
@@ -958,8 +959,12 @@ function animate() {
 
         // Actualización de Cámara sincronizada con el auto
         if (renderer.xr.isPresenting) {
-            // El xrCameraRig ya es hijo de player; mantenemos su posición fija local en el habitáculo
-            xrCameraRig.position.set(-0.48, 1.05, 0.15);
+            // El xrCameraRig ya es hijo de player; compensamos offset del visor para fijar la cabeza al volante
+            xrCameraRig.position.set(
+                VR_COCKPIT_ANCHOR.x - camera.position.x,
+                VR_COCKPIT_ANCHOR.y - camera.position.y,
+                VR_COCKPIT_ANCHOR.z - camera.position.z
+            );
             xrCameraRig.rotation.set(0, 0, 0);
 
             if (cabin) cabin.visible = false;
@@ -971,7 +976,7 @@ function animate() {
             if (roof) roof.visible = false;
             const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
             if (camera.parent !== player) player.add(camera);
-            camera.position.set(-0.48 + headBob, 1.05, 0.15);
+            camera.position.set(-0.48 + headBob, 1.40, 0.15);
             camera.rotation.set(
                 -0.03,
                 0,
@@ -1073,7 +1078,11 @@ function animate() {
     } else if (gameState === 'crashing') {
         if (renderer.xr.isPresenting) {
             // Mantener al piloto en su asiento durante el impacto
-            xrCameraRig.position.set(-0.48, 1.05, 0.15);
+            xrCameraRig.position.set(
+                VR_COCKPIT_ANCHOR.x - camera.position.x,
+                VR_COCKPIT_ANCHOR.y - camera.position.y,
+                VR_COCKPIT_ANCHOR.z - camera.position.z
+            );
             xrCameraRig.rotation.set(0, 0, 0);
         } else {
             if (camera.parent !== scene) scene.add(camera);

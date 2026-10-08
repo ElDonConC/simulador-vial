@@ -198,10 +198,11 @@ function createVRHeadUpDisplay() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false 
+        depthTest: false,
+        depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 999;
+    mesh.renderOrder = 9999;
     mesh.userData = { canvas, ctx, texture, render };
     return mesh;
 }
@@ -258,10 +259,11 @@ function createVRInfractionPanel() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false
+        depthTest: false,
+        depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 999;
+    mesh.renderOrder = 9999;
     mesh.userData = { canvas, ctx, texture, show };
     return mesh;
 }
@@ -548,10 +550,11 @@ function createVRGameOverPanel() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false
+        depthTest: false,
+        depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 999;
+    mesh.renderOrder = 9999;
     mesh.userData = { canvas, ctx, texture, update };
     return mesh;
 }
@@ -656,10 +659,11 @@ function createVRPhoneDistraction() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false
+        depthTest: false,
+        depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 999;
+    mesh.renderOrder = 9999;
     mesh.userData = { canvas, ctx, texture, render };
     return mesh;
 }
@@ -787,10 +791,11 @@ function createVRMenuPanel() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false // Siempre visible sin ser ocluido
+        depthTest: false, // Siempre visible sin ser ocluido
+        depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 999;
+    mesh.renderOrder = 9999;
     mesh.userData = { canvas, ctx, texture, render, selectedIdx: 0 };
     return mesh;
 }
