@@ -45,6 +45,10 @@ renderer.setClearColor(0x0f172a);
 renderer.shadowMap.enabled = false;
 const frameClock = new THREE.Clock();
 const BASE_FPS = 60;
+const desktopFpvOffset = new THREE.Vector3(-0.48, 1.25, 0.15);
+const desktopFpvWorldOffset = new THREE.Vector3();
+const desktopFpvLocalQuat = new THREE.Quaternion();
+const desktopFpvTiltEuler = new THREE.Euler();
 
 // WebXR para Meta Quest 2 / 3 / Pro y Rig de Cámara VR
 renderer.xr.enabled = true;
@@ -969,12 +973,18 @@ function animate() {
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
             const headBob = currentMode === 'drunk' ? Math.sin(Date.now() * 0.002) * 0.04 : 0;
-            camera.position.set(player.position.x - 0.48 + headBob, 1.25, player.position.z + 0.15);
-            camera.rotation.set(
-                -0.03, // Leve inclinación hacia abajo para ver el velocímetro digital del tablero y la calle al frente
+            desktopFpvWorldOffset.copy(desktopFpvOffset);
+            desktopFpvWorldOffset.x += headBob;
+            desktopFpvWorldOffset.applyQuaternion(player.quaternion);
+            camera.position.copy(player.position).add(desktopFpvWorldOffset);
+
+            desktopFpvTiltEuler.set(
+                -0.03,
                 (targetX - player.position.x) * 0.04,
                 currentMode === 'drunk' ? Math.sin(Date.now() * 0.0015) * 0.05 : (targetX - player.position.x) * 0.03
             );
+            desktopFpvLocalQuat.setFromEuler(desktopFpvTiltEuler);
+            camera.quaternion.copy(player.quaternion).multiply(desktopFpvLocalQuat);
         } else {
             // Modo Tercera Persona en pantalla plana: totalmente centrado detrás del vehículo
             if (cabin) cabin.visible = true;
