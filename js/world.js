@@ -198,11 +198,11 @@ function createVRHeadUpDisplay() {
         map: texture, 
         transparent: true, 
         side: THREE.DoubleSide,
-        depthTest: false,
+        depthTest: true,
         depthWrite: false
     });
     const mesh = new THREE.Mesh(planeGeo, planeMat);
-    mesh.renderOrder = 9999;
+    mesh.renderOrder = 20;
     mesh.userData = { canvas, ctx, texture, render };
     return mesh;
 }

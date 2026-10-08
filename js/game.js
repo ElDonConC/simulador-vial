@@ -189,12 +189,12 @@ vrInfractionPanel.position.set(0, 0.45, -0.85);
 vrInfractionPanel.visible = false;
 xrCameraRig.add(vrInfractionPanel);
 
-// Velocímetro Fijo en VR (Head-Up Display anclado al visor sobre el parabrisas/tablero)
+// Velocímetro Fijo en VR (anclado al tablero del auto, no al visor)
 const vrSpeedometerHUD = createVRHeadUpDisplay();
-vrSpeedometerHUD.position.set(0, -0.22, -0.72); // Fijado en el campo visual del piloto sin tapar la pista
-vrSpeedometerHUD.rotation.set(-0.15, 0, 0); // Leve inclinación ergonómica
+vrSpeedometerHUD.position.set(-0.18, 1.09, -0.44); // Zona de panel/instrumentos frente al volante
+vrSpeedometerHUD.rotation.set(-0.55, 0, 0); // Inclinado hacia la vista del piloto
 vrSpeedometerHUD.visible = false;
-xrCameraRig.add(vrSpeedometerHUD);
+player.add(vrSpeedometerHUD);
 // Iluminación global clara
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 scene.add(ambientLight);
