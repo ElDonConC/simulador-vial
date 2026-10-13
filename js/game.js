@@ -53,6 +53,17 @@ let isVRActive = false;
 let vrSession = null;
 let vrSelectedModeIdx = 0;
 let vrStickDebounce = 0;
+const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+let isMobileVRActive = false;
+let hasMobileOrientation = false;
+let mobileVrBaseAlpha = null;
+let mobileVrAlpha = 0;
+let mobileVrBeta = 0;
+let mobileVrGamma = 0;
+const mobileLeftEyeCamera = new THREE.PerspectiveCamera(70, (window.innerWidth * 0.5) / window.innerHeight, 0.1, 350);
+const mobileRightEyeCamera = new THREE.PerspectiveCamera(70, (window.innerWidth * 0.5) / window.innerHeight, 0.1, 350);
+const mobileVrBaseWorldPos = new THREE.Vector3();
+const mobileVrBaseWorldQuat = new THREE.Quaternion();
 
 // Inicializar Vehículo del Jugador
 const playerVehicle = createPlayerVehicle();
@@ -313,6 +324,7 @@ bindTouchButton(btnDown, () => { isDownDown = true; }, () => { isDownDown = fals
 bindTouchButton(btnBrake, () => { isBraking = true; }, () => { isBraking = false; });
 
 function toggleCameraView() {
+    if (isMobileVRActive) return;
     cameraMode = (cameraMode === 'fpv') ? 'tpv' : 'fpv';
     elCamLabel.innerText = (cameraMode === 'fpv') ? '1ra Persona' : '3ra Persona';
 }
@@ -357,10 +369,110 @@ if ('xr' in navigator) {
         }
     }).catch(() => {});
 }
+if (!hasVRSupport && isMobileDevice) {
+    const vrLabel = document.getElementById('vr-btn-label');
+    if (vrLabel) vrLabel.innerText = '📱 Entrar VR móvil';
+}
+
+function onMobileOrientation(event) {
+    if (!isMobileVRActive) return;
+    if (typeof event.alpha === 'number') mobileVrAlpha = event.alpha;
+    if (typeof event.beta === 'number') mobileVrBeta = event.beta;
+    if (typeof event.gamma === 'number') mobileVrGamma = event.gamma;
+}
+
+async function startMobileVRMode() {
+    if (isMobileVRActive) return;
+    try {
+        if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission !== 'granted') {
+                toggleQuestModal(true);
+                return;
+            }
+        }
+    } catch (err) {
+        console.warn('Permiso sensores móvil no concedido:', err);
+    }
+
+    hasMobileOrientation = ('DeviceOrientationEvent' in window);
+    if (hasMobileOrientation) {
+        window.addEventListener('deviceorientation', onMobileOrientation, true);
+    }
+
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    isMobileVRActive = true;
+    cameraMode = 'fpv';
+    const vrLabel = document.getElementById('vr-btn-label');
+    if (vrLabel) vrLabel.innerText = 'Salir VR móvil';
+    if (elCamToggle) elCamToggle.classList.add('hidden');
+    mobileVrBaseAlpha = null;
+}
+
+function stopMobileVRMode() {
+    if (!isMobileVRActive) return;
+    isMobileVRActive = false;
+    window.removeEventListener('deviceorientation', onMobileOrientation, true);
+    hasMobileOrientation = false;
+    mobileVrBaseAlpha = null;
+    const vrLabel = document.getElementById('vr-btn-label');
+    if (vrLabel) vrLabel.innerText = isMobileDevice ? '📱 Entrar VR móvil' : 'VR Quest';
+    if (!renderer.xr.isPresenting && elCamToggle && gameState === 'playing') {
+        if (isMobileVRActive) {
+            elCamToggle.classList.add('hidden');
+        } else {
+            elCamToggle.classList.remove('hidden');
+        }
+    }
+    if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+function renderMobileStereo() {
+    const fullW = window.innerWidth;
+    const fullH = window.innerHeight;
+    const eyeW = Math.floor(fullW / 2);
+    const eyeAspect = eyeW / fullH;
+    camera.aspect = eyeAspect;
+    camera.updateProjectionMatrix();
+
+    camera.getWorldPosition(mobileVrBaseWorldPos);
+    camera.getWorldQuaternion(mobileVrBaseWorldQuat);
+
+    const halfIpd = 0.03;
+    mobileLeftEyeCamera.position.copy(mobileVrBaseWorldPos);
+    mobileLeftEyeCamera.quaternion.copy(mobileVrBaseWorldQuat);
+    mobileLeftEyeCamera.translateX(-halfIpd);
+    mobileLeftEyeCamera.projectionMatrix.copy(camera.projectionMatrix);
+    mobileLeftEyeCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+
+    mobileRightEyeCamera.position.copy(mobileVrBaseWorldPos);
+    mobileRightEyeCamera.quaternion.copy(mobileVrBaseWorldQuat);
+    mobileRightEyeCamera.translateX(halfIpd);
+    mobileRightEyeCamera.projectionMatrix.copy(camera.projectionMatrix);
+    mobileRightEyeCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+
+    renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, eyeW, fullH);
+    renderer.setScissor(0, 0, eyeW, fullH);
+    renderer.render(scene, mobileLeftEyeCamera);
+
+    renderer.setViewport(eyeW, 0, fullW - eyeW, fullH);
+    renderer.setScissor(eyeW, 0, fullW - eyeW, fullH);
+    renderer.render(scene, mobileRightEyeCamera);
+    renderer.setScissorTest(false);
+}
 
 async function handleVRButtonClick() {
     if (hasVRSupport) {
         toggleVRMode();
+    } else if (isMobileDevice) {
+        if (isMobileVRActive) stopMobileVRMode();
+        else await startMobileVRMode();
     } else {
         toggleQuestModal(true);
     }
@@ -394,7 +506,7 @@ async function toggleVRMode() {
             session.addEventListener('end', () => {
                 isVRActive = false;
                 vrSession = null;
-                document.getElementById('vr-btn-label').innerText = '🥽 Entrar en VR (Meta Quest)';
+                document.getElementById('vr-btn-label').innerText = isMobileDevice ? '📱 Entrar VR móvil' : '🥽 Entrar en VR (Meta Quest)';
                 // Al salir de VR, regresar la cámara a la escena raíz para modo escritorio
                 scene.add(camera);
                 camera.position.set(0, 2.5, 7.0);
@@ -727,6 +839,9 @@ function resetGame() {
     } else {
         camera.position.set(0, 2.5, 7.0);
         camera.lookAt(0, 1.0, -10);
+        if (isMobileVRActive) {
+            cameraMode = 'fpv';
+        }
     }
 
     if (cabin) cabin.visible = true;
@@ -739,7 +854,7 @@ function animate() {
     const frameScale = deltaTime * BASE_FPS;
 
     // Si estamos en el menú principal en pantalla plana, mantener la cámara centrada mirando al auto
-    if (gameState === 'menu' && !renderer.xr.isPresenting) {
+    if (gameState === 'menu' && !renderer.xr.isPresenting && !isMobileVRActive) {
         if (camera.parent !== scene) scene.add(camera);
         camera.position.set(0, 2.5, 7.0);
         camera.lookAt(0, 1.0, -10);
@@ -970,14 +1085,25 @@ function animate() {
         });
 
         // Actualización de Cámara sincronizada con el auto
-        if (renderer.xr.isPresenting) {
+        if (renderer.xr.isPresenting || isMobileVRActive) {
             // El xrCameraRig ya es hijo de player; compensamos offset del visor para fijar la cabeza al volante
-            xrCameraRig.position.set(
-                VR_COCKPIT_ANCHOR.x - camera.position.x,
-                VR_COCKPIT_ANCHOR.y - camera.position.y,
-                VR_COCKPIT_ANCHOR.z - camera.position.z
-            );
-            xrCameraRig.rotation.set(0, 0, 0);
+            if (renderer.xr.isPresenting) {
+                xrCameraRig.position.set(
+                    VR_COCKPIT_ANCHOR.x - camera.position.x,
+                    VR_COCKPIT_ANCHOR.y - camera.position.y,
+                    VR_COCKPIT_ANCHOR.z - camera.position.z
+                );
+                xrCameraRig.rotation.set(0, 0, 0);
+            } else {
+                if (camera.parent !== player) player.add(camera);
+                if (mobileVrBaseAlpha === null && typeof mobileVrAlpha === 'number') mobileVrBaseAlpha = mobileVrAlpha;
+                const alphaDiff = (typeof mobileVrAlpha === 'number' ? mobileVrAlpha : 0) - (mobileVrBaseAlpha || 0);
+                const yaw = THREE.MathUtils.degToRad(alphaDiff);
+                const pitch = THREE.MathUtils.clamp(THREE.MathUtils.degToRad((mobileVrBeta || 0) - 25), -0.65, 0.65);
+                const roll = THREE.MathUtils.clamp(THREE.MathUtils.degToRad((mobileVrGamma || 0) * 0.25), -0.25, 0.25);
+                camera.position.set(-0.48, 1.10, 0.10);
+                camera.rotation.set(-0.03 + pitch, yaw, roll);
+            }
 
             if (cabin) cabin.visible = false;
             if (roof) roof.visible = false;
@@ -1105,7 +1231,11 @@ function animate() {
         }
     }
 
-    renderer.render(scene, camera);
+    if (isMobileVRActive && !renderer.xr.isPresenting) {
+        renderMobileStereo();
+    } else {
+        renderer.render(scene, camera);
+    }
 }
 
 window.addEventListener('resize', () => {
