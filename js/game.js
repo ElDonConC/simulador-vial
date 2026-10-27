@@ -54,6 +54,7 @@ let vrSession = null;
 let vrSelectedModeIdx = 0;
 let vrStickDebounce = 0;
 const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
 let isMobileVRActive = false;
 let hasMobileOrientation = false;
 let mobileVrBaseAlpha = null;
@@ -383,26 +384,6 @@ function onMobileOrientation(event) {
 
 async function startMobileVRMode() {
     if (isMobileVRActive) return;
-    try {
-        if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            const permission = await DeviceOrientationEvent.requestPermission();
-            if (permission !== 'granted') {
-                toggleQuestModal(true);
-                return;
-            }
-        }
-    } catch (err) {
-        console.warn('Permiso sensores móvil no concedido:', err);
-    }
-
-    hasMobileOrientation = ('DeviceOrientationEvent' in window);
-    if (hasMobileOrientation) {
-        window.addEventListener('deviceorientation', onMobileOrientation, true);
-    }
-
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-    }
 
     isMobileVRActive = true;
     cameraMode = 'fpv';
@@ -410,6 +391,44 @@ async function startMobileVRMode() {
     if (vrLabel) vrLabel.innerText = 'Salir VR móvil';
     if (elCamToggle) elCamToggle.classList.add('hidden');
     mobileVrBaseAlpha = null;
+
+    const orientationEvent = window.DeviceOrientationEvent;
+    hasMobileOrientation = Boolean(orientationEvent);
+    let orientationPermission = null;
+    try {
+        if (orientationEvent && typeof orientationEvent.requestPermission === 'function') {
+            orientationPermission = orientationEvent.requestPermission();
+        }
+    } catch (err) {
+        console.warn('Permiso sensores móvil no concedido:', err);
+        hasMobileOrientation = false;
+    }
+
+    try {
+        const requestFullscreen = document.documentElement.requestFullscreen;
+        if (typeof requestFullscreen === 'function') {
+            const fullscreenRequest = requestFullscreen.call(document.documentElement);
+            if (fullscreenRequest && typeof fullscreenRequest.catch === 'function') {
+                fullscreenRequest.catch((err) => console.warn('Pantalla completa no disponible:', err));
+            }
+        }
+    } catch (err) {
+        console.warn('Pantalla completa no disponible:', err);
+    }
+
+    if (orientationPermission) {
+        try {
+            hasMobileOrientation = await orientationPermission === 'granted';
+        } catch (err) {
+            console.warn('Permiso sensores móvil no concedido:', err);
+            hasMobileOrientation = false;
+        }
+    }
+
+    if (!isMobileVRActive) return;
+    if (hasMobileOrientation) {
+        window.addEventListener('deviceorientation', onMobileOrientation, true);
+    }
 }
 
 function stopMobileVRMode() {
@@ -468,11 +487,11 @@ function renderMobileStereo() {
 }
 
 async function handleVRButtonClick() {
-    if (hasVRSupport) {
-        toggleVRMode();
-    } else if (isMobileDevice) {
+    if (isMobileDevice && (!hasVRSupport || isIOSDevice)) {
         if (isMobileVRActive) stopMobileVRMode();
         else await startMobileVRMode();
+    } else if (hasVRSupport) {
+        toggleVRMode();
     } else {
         toggleQuestModal(true);
     }
